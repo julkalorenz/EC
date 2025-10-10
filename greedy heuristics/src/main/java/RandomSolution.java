@@ -1,3 +1,7 @@
+package main.java;
+
+import main.java.utils.CSVParser;
+
 public class RandomSolution {
 
     private CSVParser parser;
