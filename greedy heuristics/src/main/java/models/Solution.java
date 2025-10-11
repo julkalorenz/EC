@@ -49,6 +49,9 @@ public class Solution {
         return getTotalDistance() + getTotalCost();
     }
 
+    public int[] getPath() {
+        return path;
+    }
     public void displaySolution() {
         SolutionDrawer drawer = new SolutionDrawer(nodes, path);
         JFrame frame = new JFrame("Solution");
@@ -58,5 +61,4 @@ public class Solution {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-
 }

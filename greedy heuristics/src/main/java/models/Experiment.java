@@ -2,6 +2,7 @@ package main.java.models;
 
 import main.java.solver.GenericSolver;
 
+
 public class Experiment {
     private GenericSolver solver;
     private Solution bestSolution;
@@ -32,10 +33,13 @@ public class Experiment {
         solutionScores = new int[nodesCount];
         bestSolution = null;
 
+        int barWidth = 40;
+
         for (int startNodeID = 0; startNodeID < nodesCount; startNodeID++) {
             long startTime = System.nanoTime();
             Solution solution = solver.getSolution(startNodeID);
             long endTime = System.nanoTime();
+
             float durationInSeconds = (endTime - startTime) / 1_000_000_000.0f;
             solutionTimes[startNodeID] = durationInSeconds;
             int score = solution.getScore();
@@ -44,7 +48,17 @@ public class Experiment {
             if (bestSolution == null || score < bestSolution.getScore()) {
                 bestSolution = solution;
             }
+
+            // --- Progress bar update ---
+            double progress = (startNodeID + 1) / (double) nodesCount;
+            int filled = (int) (barWidth * progress);
+            int percent = (int) (progress * 100);
+
+            String bar = "█".repeat(filled) + "-".repeat(barWidth - filled);
+            System.out.print("\rProgress: [" + bar + "] " + percent + "%");
+            System.out.flush();
         }
+        System.out.println("\nDone!");
     }
 
     /**
