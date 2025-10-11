@@ -1,41 +1,38 @@
-package main.java;
+package main.java.solver;
 
+import java.util.List;
 import main.java.utils.CSVParser;
+import main.java.models.Node;
 
-public class RandomSolution {
-
-    private CSVParser parser;
+public class RandomSolver {
 
 //    choose 50% of the nodes for the cycle - if odd ceil
 //    distance between nodes = Euclidean distance rounded mathematically
 //    start from a random node and choose a random node until there are 50% of nodes selected
     public static void main(String[] args) {
-        String filePath = "data/TSPA.csv";
+        String filePath = "src/main/data/TSPA.csv";
         String delimiter = ";";
         CSVParser parser = new CSVParser(filePath, delimiter);
-        int[][] data = parser.readCSV();
-
-        RandomSolution randomSolution = new RandomSolution();
-        int[][] cycle = randomSolution.generateRandomSolution(data);
+        List<Node> data = parser.getNodes();
+        RandomSolver randomSolver = new RandomSolver();
+        int[] cycle = randomSolver.generateRandomSolution(data);
 
         int lineNo = 1;
-        for (int[] row : cycle) {
+        for (int row : cycle) {
             System.out.print("Line " + lineNo + ": ");
-            for (int value : row) {
-                System.out.print(value + " | ");
-            }
+            System.out.print(row);
             System.out.println();
             lineNo++;
         }
 
     }
 
-    public int[][] generateRandomSolution(int[][] nodes) {
-        int totalNodes = nodes.length;
+    public int[] generateRandomSolution(List<Node> nodes) {
+        int totalNodes = nodes.size();
         int nodesInCycle = (int) Math.ceil(totalNodes / 2.0);
 
         boolean[] selected = new boolean[totalNodes];
-        int[][] cycle = new int[nodesInCycle + 1][3];
+        int[] cycle = new int[nodesInCycle + 1]; // array of ids of size nodesInCycle + 1 (to return to start)
 
         int count = 0;
 
@@ -43,7 +40,7 @@ public class RandomSolution {
             int randomIndex = (int) (Math.random() * totalNodes);
             if (!selected[randomIndex]) {
                 selected[randomIndex] = true;
-                cycle[count] = nodes[randomIndex];
+                cycle[count] = randomIndex;
                 count++;
             }
         }

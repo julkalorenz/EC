@@ -2,22 +2,23 @@ package main.java.utils;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import main.java.models.Node;
+import main.java.solver.RandomSolver;
 
 public class SolutionDrawer extends JPanel {
 
-//    TODO represent the cost of a node on the graph
-    private int[][] nodes;
-    private int[][] cycleNodes;
+    private List<Node> nodesList; // List of Node objects
+    private int[] cycleNodes;     // Array of node IDs (indexes in nodesList) IMPORTANT: should start and end with the same node
 
-    // Scaling variables
     private int panelWidth = 1000;
     private int panelHeight = 800;
     private int margin = 40;
 
     private int minX, maxX, minY, maxY;
 
-    public SolutionDrawer(int[][] nodes, int[][] cycleNodes) {
-        this.nodes = nodes;
+    public SolutionDrawer(List<Node> nodesList, int[] cycleNodes) {
+        this.nodesList = nodesList;
         this.cycleNodes = cycleNodes;
         this.setPreferredSize(new Dimension(panelWidth, panelHeight));
         calculateBounds();
@@ -29,11 +30,11 @@ public class SolutionDrawer extends JPanel {
         minY = Integer.MAX_VALUE;
         maxY = Integer.MIN_VALUE;
 
-        for (int[] node : nodes) {
-            if (node[0] < minX) minX = node[0];
-            if (node[0] > maxX) maxX = node[0];
-            if (node[1] < minY) minY = node[1];
-            if (node[1] > maxY) maxY = node[1];
+        for (Node node : nodesList) {
+            if (node.getX() < minX) minX = node.getX();
+            if (node.getX() > maxX) maxX = node.getX();
+            if (node.getY() < minY) minY = node.getY();
+            if (node.getY() > maxY) maxY = node.getY();
         }
     }
 
@@ -44,8 +45,7 @@ public class SolutionDrawer extends JPanel {
 
     private int scaleY(int y) {
         double scale = (double) (panelHeight - 2 * margin) / (maxY - minY);
-        // Y is inverted because screen Y grows down
-        return panelHeight - (int) ((y - minY) * scale + margin);
+        return panelHeight - (int) ((y - minY) * scale + margin); // Inverted Y
     }
 
     @Override
@@ -53,39 +53,38 @@ public class SolutionDrawer extends JPanel {
         super.paintComponent(g);
 
         Graphics2D g2d = (Graphics2D) g;
-        int radius = 5;
+        int radius = 6;
 
         g2d.setColor(Color.GRAY);
-        for (int[] node : nodes) {
-            int x = scaleX(node[0]);
-            int y = scaleY(node[1]);
+        for (Node node : nodesList) {
+            int x = scaleX(node.getX());
+            int y = scaleY(node.getY());
             g2d.fillOval(x - radius, y - radius, 2 * radius, 2 * radius);
         }
 
         g2d.setColor(Color.RED);
         for (int i = 0; i < cycleNodes.length - 1; i++) {
-            int x1 = scaleX(cycleNodes[i][0]);
-            int y1 = scaleY(cycleNodes[i][1]);
-            int x2 = scaleX(cycleNodes[i + 1][0]);
-            int y2 = scaleY(cycleNodes[i + 1][1]);
+            Node from = nodesList.get(cycleNodes[i]);
+            Node to = nodesList.get(cycleNodes[i + 1]);
+
+            int x1 = scaleX(from.getX());
+            int y1 = scaleY(from.getY());
+            int x2 = scaleX(to.getX());
+            int y2 = scaleY(to.getY());
 
             g2d.fillOval(x1 - radius, y1 - radius, 2 * radius, 2 * radius);
             g2d.drawLine(x1, y1, x2, y2);
         }
-
     }
 
     public static void main(String[] args) {
-        String filePath = "data/TSPA.csv";
-        String delimiter = ";";
-        CSVParser parser = new CSVParser(filePath, delimiter);
-        int[][] data = parser.readCSV();
+        CSVParser parser = new CSVParser("src/main/data/TSPA.csv", ";");
+        List<Node> nodeList = parser.getNodes();
+        RandomSolver randomSolver = new RandomSolver();
+        int[] cycle = randomSolver.generateRandomSolution(nodeList);
 
-        RandomSolution randomSolution = new RandomSolution();
-        int[][] cycle = randomSolution.generateRandomSolution(data);
-
-        JFrame frame = new JFrame("TSP Solution");
-        SolutionDrawer drawer = new SolutionDrawer(data, cycle);
+        JFrame frame = new JFrame("Solution");
+        SolutionDrawer drawer = new SolutionDrawer(nodeList, cycle);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(drawer);
         frame.pack();
