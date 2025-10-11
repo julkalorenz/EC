@@ -1,5 +1,10 @@
 package main.java.models;
 
+import main.java.utils.SolutionDrawer;
+
+import javax.swing.*;
+import java.util.List;
+
 public class Solution {
     /**
      * I think it may be a good idea to have a consistent Solution class
@@ -8,11 +13,16 @@ public class Solution {
      * IMPORTANT: We need to agree on a consistent way to represent the path
      */
 
+    private List<Node> nodes;
+
+    private int[][] objectiveMatrix;
     private int[][] distanceMatrix;
     private int[] costs;
-    private int[] path;
+    private int[] path; // Array of node IDs (indexes in nodesList) IMPORTANT: should start and end with the same node
 
-    public Solution(int[][] distanceMatrix, int[] costs, int[] path) {
+    public Solution(List<Node> nodes, int[][] objectiveMatrix, int[][] distanceMatrix, int[] costs, int[] path) {
+        this.nodes = nodes;
+        this.objectiveMatrix = objectiveMatrix;
         this.distanceMatrix = distanceMatrix;
         this.costs = costs;
         this.path = path;
@@ -35,6 +45,16 @@ public class Solution {
             totalCost += costs[node];
         }
         return totalCost;
+    }
+
+    public void displaySolution() {
+        SolutionDrawer drawer = new SolutionDrawer(nodes, path);
+        JFrame frame = new JFrame("Solution");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(drawer);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
     }
 
 }
