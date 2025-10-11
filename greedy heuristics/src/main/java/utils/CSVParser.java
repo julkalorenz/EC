@@ -90,7 +90,7 @@ public class CSVParser {
         for (int i = 0; i < data.length; i++) {
             for (int j = 0; j < data.length; j++) {
                 if (i != j) {
-                    objectiveMatrix[i][j] = distanceMatrix[i][j] * data[j][2];
+                    objectiveMatrix[i][j] = distanceMatrix[i][j] + data[j][2];
                 } else {
                     objectiveMatrix[i][j] = 0;
                 }

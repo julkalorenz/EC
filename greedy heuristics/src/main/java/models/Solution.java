@@ -10,11 +10,9 @@ public class Solution {
      * I think it may be a good idea to have a consistent Solution class
      * This way we can create methods such as calculate solution score
      *
-     * IMPORTANT: We need to agree on a consistent way to represent the path
      */
 
     private List<Node> nodes;
-
     private int[][] objectiveMatrix;
     private int[][] distanceMatrix;
     private int[] costs;
@@ -32,10 +30,9 @@ public class Solution {
 
         int totalDistance = 0;
         for (int i = 0; i < path.length - 1; i++) {
-            totalDistance += distanceMatrix[path[i]][path[i + 1]];
+            totalDistance += distanceMatrix[path[i]][path[i + 1]]; // End node is the start node so thats enough, no need to add dist between path[-1] and path[0]
         }
 
-        totalDistance += distanceMatrix[path[path.length - 1]][path[0]]; // Return to start
         return totalDistance;
     }
 
@@ -44,7 +41,12 @@ public class Solution {
         for (int node : path) {
             totalCost += costs[node];
         }
+        totalCost -= costs[path[0]]; // Subtract the cost of the starting/ending node as it's counted twice
         return totalCost;
+    }
+
+    public int getScore() {
+        return getTotalDistance() + getTotalCost();
     }
 
     public void displaySolution() {
