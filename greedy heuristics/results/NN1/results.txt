@@ -1,0 +1,2 @@
+Time (seconds): Min = 1.26E-5, Max = 0.0037747, Avg = 6.182099E-5
+Score: Min = 83182, Max = 89433, Avg = 85108.51

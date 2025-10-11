@@ -2,6 +2,10 @@ package main.java.solver;
 
 import main.java.models.Solution;
 
+import main.java.models.Node;
+
+import java.util.List;
+
 public abstract class GenericSolver {
     /**
      * Generic solver class to be extended by specific heuristic implementations.
@@ -19,10 +23,13 @@ public abstract class GenericSolver {
     private int[][] objectiveMatrix;
     private int[] costs;
 
-    public GenericSolver(int[][] distanceMatrix,int[][] objectiveMatrix, int[] costs) {
+    private List<Node> nodes;
+
+    public GenericSolver(int[][] distanceMatrix,int[][] objectiveMatrix, int[] costs, List<Node> nodes  ) {
         this.distanceMatrix = distanceMatrix;
         this.objectiveMatrix = objectiveMatrix;
         this.costs = costs;
+        this.nodes = nodes;
     }
 
     public int[][] getDistanceMatrix() {
@@ -33,6 +40,9 @@ public abstract class GenericSolver {
     }
     public int[] getCosts() {
         return costs;
+    }
+    public List<Node> getNodes() {
+        return nodes;
     }
 
     /** Method to be implemented by subclasses to solve the problem.
