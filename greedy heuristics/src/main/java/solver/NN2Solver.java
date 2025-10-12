@@ -12,17 +12,6 @@ public class NN2Solver extends GenericSolver{
         super(distanceMatrix, objectiveMatrix, costs, nodes, "Nearest Neighbor Any");
     }
 
-    private int getTempScore (ArrayList<Integer> path, int newNode, int position){
-        int score = 0;
-        ArrayList <Integer> tempPath = new ArrayList<>(path);
-        tempPath.add(position, newNode);
-        tempPath.add(tempPath.getFirst()); // End node is the start node
-        for (int i = 0; i < tempPath.size() - 1; i++) {
-            score += getObjectiveMatrix()[tempPath.get(i)][tempPath.get(i + 1)];
-        }
-
-        return score;
-    }
     private InsertionInfo findNeighborAndPosition(ArrayList<Integer> currentPath, boolean[] visited) {
         int bestNode = -1;
         int bestPosition = -1;
@@ -31,7 +20,10 @@ public class NN2Solver extends GenericSolver{
         for (int node = 0; node < getObjectiveMatrix().length; node++) {
             if (!visited[node]) {
                 for (int position = 0; position < currentPath.size(); position++) {
-                    int tempScore = getTempScore(currentPath, node, position);
+                    int tempScore = 0;
+                    tempScore += getObjectiveMatrix()[currentPath.get(position == 0 ? currentPath.size() - 1 : position - 1)][node];
+                    tempScore += getObjectiveMatrix()[node][currentPath.get(position)];
+                    tempScore -= getObjectiveMatrix()[currentPath.get(position == 0 ? currentPath.size() - 1 : position - 1)][currentPath.get(position)];
                     if (tempScore < minScore) {
                         minScore = tempScore;
                         bestNode = node;
