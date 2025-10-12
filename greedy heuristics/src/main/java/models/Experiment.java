@@ -70,6 +70,7 @@ public class Experiment {
     public void printStats(){
         bestSolution.displaySolution();
         bestSolution.saveAsImage("results/" + solver.getMethodName() + "/" + datasetName + "_best_solution.png");
+        bestSolution.savePath("results/" + solver.getMethodName() + "/" + datasetName + "_best_path.txt");
         float minTime = Float.MAX_VALUE;
         float maxTime = Float.MIN_VALUE;
         float totalTime = 0;

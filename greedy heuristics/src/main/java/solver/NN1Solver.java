@@ -9,7 +9,7 @@ import java.util.List;
 
 public class NN1Solver extends GenericSolver{
     public NN1Solver(int[][] distanceMatrix, int[][] objectiveMatrix, int[] costs, List<Node> nodes) {
-        super(distanceMatrix, objectiveMatrix, costs, nodes, "NN1");
+        super(distanceMatrix, objectiveMatrix, costs, nodes, "Nearest Neighbor at end");
     }
 
     public int findNearestNeighbor(int currentNode, boolean[] visited) {

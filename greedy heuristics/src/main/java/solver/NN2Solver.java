@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class NN2Solver extends GenericSolver{
     public NN2Solver(int[][] distanceMatrix, int[][] objectiveMatrix, int[] costs, List<Node> nodes) {
-        super(distanceMatrix, objectiveMatrix, costs, nodes, "NN2");
+        super(distanceMatrix, objectiveMatrix, costs, nodes, "Nearest Neighbor Any");
     }
 
     private int getTempScore (ArrayList<Integer> path, int newNode, int position){
