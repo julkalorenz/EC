@@ -98,5 +98,14 @@ public class CSVParser {
         }
         return objectiveMatrix;
     }
+
+    public int[] getCosts() {
+        int[][] data = readCSV();
+        int[] costs = new int[data.length];
+        for (int i = 0; i < data.length; i++) {
+            costs[i] = data[i][2];
+        }
+        return costs;
+    }
 }
 

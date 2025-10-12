@@ -107,18 +107,4 @@ public class SolutionDrawer extends JPanel {
         }
     }
 
-    public static void main(String[] args) {
-        CSVParser parser = new CSVParser("src/main/data/TSPA.csv", ";");
-        List<Node> nodeList = parser.getNodes();
-        RandomSolver randomSolver = new RandomSolver();
-        int[] cycle = randomSolver.generateRandomSolution(nodeList);
-
-        JFrame frame = new JFrame("Solution");
-        SolutionDrawer drawer = new SolutionDrawer(nodeList, cycle);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(drawer);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
 }
