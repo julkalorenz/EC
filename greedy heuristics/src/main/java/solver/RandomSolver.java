@@ -1,34 +1,20 @@
 package main.java.solver;
 
 import java.util.List;
+
+import main.java.models.Solution;
 import main.java.utils.CSVParser;
 import main.java.models.Node;
 
-public class RandomSolver {
+public class RandomSolver extends GenericSolver {
 
-//    choose 50% of the nodes for the cycle - if odd ceil
-//    distance between nodes = Euclidean distance rounded mathematically
-//    start from a random node and choose a random node until there are 50% of nodes selected
-    public static void main(String[] args) {
-        String filePath = "src/main/data/TSPA.csv";
-        String delimiter = ";";
-        CSVParser parser = new CSVParser(filePath, delimiter);
-        List<Node> data = parser.getNodes();
-        RandomSolver randomSolver = new RandomSolver();
-        int[] cycle = randomSolver.generateRandomSolution(data);
-
-        int lineNo = 1;
-        for (int row : cycle) {
-            System.out.print("Line " + lineNo + ": ");
-            System.out.print(row);
-            System.out.println();
-            lineNo++;
-        }
-
+    public RandomSolver(int[][] distanceMatrix, int[][] objectiveMatrix, int[] costs, List<Node> nodes) {
+        super(distanceMatrix, objectiveMatrix, costs, nodes, "Random");
     }
 
-    public int[] generateRandomSolution(List<Node> nodes) {
-        int totalNodes = nodes.size();
+    @Override
+    public Solution getSolution(int startNodeID) {
+        int totalNodes = getNodes().size();
         int nodesInCycle = (int) Math.ceil(totalNodes / 2.0);
 
         boolean[] selected = new boolean[totalNodes];
@@ -46,7 +32,27 @@ public class RandomSolver {
         }
         // ensure the cycle starts and ends at the same node
         cycle[nodesInCycle] = cycle[0];
-        return cycle;
+        return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), cycle, getMethodName());
     }
 
+    public static void main(String[] args) {
+        String filePath = "src/main/data/TSPA.csv";
+        String delimiter = ";";
+        CSVParser parser = new CSVParser(filePath, delimiter);
+        List<Node> nodes = parser.getNodes();
+        int[][] distanceMatrix = parser.getDistanceMatrix();
+        int[][] objectiveMatrix = parser.getObjectiveMatrix();
+        int[] costs = parser.getCosts();
+        RandomSolver randomSolver = new RandomSolver(distanceMatrix, objectiveMatrix, costs, nodes);
+        Solution solution = randomSolver.getSolution(0);
+
+        System.out.println("Total Distance: " + solution.getTotalDistance());
+
+        System.out.print("Path: ");
+        for (int node : solution.getPath()) {
+            System.out.print(node + " ");
+        }
+        solution.displaySolution();
+
+    }
 }

@@ -25,11 +25,14 @@ public abstract class GenericSolver {
 
     private List<Node> nodes;
 
-    public GenericSolver(int[][] distanceMatrix,int[][] objectiveMatrix, int[] costs, List<Node> nodes  ) {
+    private String methodName;
+
+    public GenericSolver(int[][] distanceMatrix,int[][] objectiveMatrix, int[] costs, List<Node> nodes, String methodName) {
         this.distanceMatrix = distanceMatrix;
         this.objectiveMatrix = objectiveMatrix;
         this.costs = costs;
         this.nodes = nodes;
+        this.methodName = methodName;
     }
 
     public int[][] getDistanceMatrix() {
@@ -43,6 +46,10 @@ public abstract class GenericSolver {
     }
     public List<Node> getNodes() {
         return nodes;
+    }
+
+    public String getMethodName() {
+        return methodName;
     }
 
     /** Method to be implemented by subclasses to solve the problem.

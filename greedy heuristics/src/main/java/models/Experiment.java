@@ -8,9 +8,11 @@ public class Experiment {
     private Solution bestSolution;
     private float[] solutionTimes;
     private int[] solutionScores;
+    private String datasetName;
 
-    public Experiment(GenericSolver solver) {
+    public Experiment(GenericSolver solver, String datasetName) {
         this.solver = solver;
+        this.datasetName = datasetName;
     }
 
     public Solution getBestSolution() {
@@ -67,6 +69,7 @@ public class Experiment {
      */
     public void printStats(){
         bestSolution.displaySolution();
+        bestSolution.saveAsImage("results/" + solver.getMethodName() + "/" + datasetName + "_best_solution.png");
         float minTime = Float.MAX_VALUE;
         float maxTime = Float.MIN_VALUE;
         float totalTime = 0;

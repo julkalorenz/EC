@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class NN2Solver extends GenericSolver{
     public NN2Solver(int[][] distanceMatrix, int[][] objectiveMatrix, int[] costs, List<Node> nodes) {
-        super(distanceMatrix, objectiveMatrix, costs, nodes);
+        super(distanceMatrix, objectiveMatrix, costs, nodes, "NN2");
     }
 
     private int getTempScore (ArrayList<Integer> path, int newNode, int position){
@@ -66,7 +66,7 @@ public class NN2Solver extends GenericSolver{
         path.add(path.getFirst()); // End node is the start node
 
         int[] finalPath = path.stream().mapToInt(i -> i).toArray();
-        return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), finalPath);
+        return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), finalPath, getMethodName());
 
 
     }

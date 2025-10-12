@@ -1,10 +1,9 @@
 package main.java.app;
 
 import java.util.List;
+import java.util.Random;
 
-import main.java.solver.GenericSolver;
-import main.java.solver.NN1Solver;
-import main.java.solver.NN2Solver;
+import main.java.solver.*;
 
 import main.java.models.Experiment;
 import main.java.models.Solution;
@@ -18,7 +17,11 @@ import main.java.utils.CSVParser;
  */
 public class Main{
     public static void main(String[] args) {
-        CSVParser parser = new CSVParser("greedy heuristics/src/main/data/TSPB.csv", ";");
+//        CSVParser parser = new CSVParser("greedy heuristics/src/main/data/TSPB.csv", ";");
+
+        String dataset = "TSPB";
+        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
+
 
         int[][] distanceMatrix = parser.getDistanceMatrix();
         int[][] objectiveMatrix = parser.getObjectiveMatrix();
@@ -26,13 +29,12 @@ public class Main{
         int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
 
         // Example: assume generic solver is not abstract
-        GenericSolver solver = new NN2Solver(distanceMatrix,objectiveMatrix, costs, nodes);
+        GenericSolver solver = new GreedyCycleSolver(distanceMatrix,objectiveMatrix, costs, nodes);
 
-        Experiment experiment = new Experiment(solver);
+        Experiment experiment = new Experiment(solver, dataset);
 
         experiment.runExperiment();
         experiment.printStats();
-
 
     }
 }
