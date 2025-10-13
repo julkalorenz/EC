@@ -19,11 +19,21 @@ public class NN2Solver extends GenericSolver{
 
         for (int node = 0; node < getObjectiveMatrix().length; node++) {
             if (!visited[node]) {
-                for (int position = 0; position < currentPath.size(); position++) {
+                for (int position = 0; position <= currentPath.size(); position++) {
                     int tempScore = 0;
-                    tempScore += getObjectiveMatrix()[currentPath.get(position == 0 ? currentPath.size() - 1 : position - 1)][node];
-                    tempScore += getObjectiveMatrix()[node][currentPath.get(position)];
-                    tempScore -= getObjectiveMatrix()[currentPath.get(position == 0 ? currentPath.size() - 1 : position - 1)][currentPath.get(position)];
+                    if (position == 0){
+                        tempScore += getObjectiveMatrix()[node][currentPath.getFirst()];
+                        tempScore -= getCosts()[currentPath.getFirst()];
+                        tempScore += getCosts()[node];
+                    } else if (position == currentPath.size()) {
+                        tempScore += getObjectiveMatrix()[currentPath.getLast()][node];
+
+                    } else{
+                        tempScore += getObjectiveMatrix()[currentPath.get(position - 1)][node];
+                        tempScore += getObjectiveMatrix()[node][currentPath.get(position)];
+                        tempScore -= getObjectiveMatrix()[currentPath.get(position - 1)][currentPath.get(position)];
+                    }
+
                     if (tempScore < minScore) {
                         minScore = tempScore;
                         bestNode = node;

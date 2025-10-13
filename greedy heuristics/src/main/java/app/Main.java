@@ -19,7 +19,7 @@ public class Main{
     public static void main(String[] args) {
 
 
-        String dataset = "TSPA";
+        String dataset = "TSPB";
         //CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
         CSVParser parser = new CSVParser("greedy heuristics/src/main/data/" + dataset + ".csv", ";");
 
