@@ -21,7 +21,7 @@ public class Main{
 
         String dataset = "TSPB";
         //CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
-        CSVParser parser = new CSVParser("greedy heuristics/src/main/data/" + dataset + ".csv", ";");
+        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
 
 
         int[][] distanceMatrix = parser.getDistanceMatrix();
@@ -30,7 +30,7 @@ public class Main{
         int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
 
         // Example: assume generic solver is not abstract
-        GenericSolver solver = new NN2Solver(distanceMatrix,objectiveMatrix, costs, nodes);
+        GenericSolver solver = new NNAny2RegretWeightedSolver(distanceMatrix,objectiveMatrix, costs, nodes);
 
         Experiment experiment = new Experiment(solver, dataset);
 

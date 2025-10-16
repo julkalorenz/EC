@@ -12,7 +12,7 @@ public class NN2Solver extends GenericSolver{
         super(distanceMatrix, objectiveMatrix, costs, nodes, "Nearest Neighbor Any");
     }
 
-    private InsertionInfo findNeighborAndPosition(ArrayList<Integer> currentPath, boolean[] visited) {
+    protected InsertionInfo findNeighborAndPosition(ArrayList<Integer> currentPath, boolean[] visited) {
         int bestNode = -1;
         int bestPosition = -1;
         int minScore = Integer.MAX_VALUE;

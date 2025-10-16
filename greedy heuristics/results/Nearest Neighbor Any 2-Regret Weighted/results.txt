@@ -1,0 +1,7 @@
+TSPA:
+Time (seconds): Min = 0.0025353, Max = 0.0376636, Avg = 0.0031401562
+Score: Min = 70010, Max = 75452, Avg = 72401.24
+
+TSPB:
+Time (seconds): Min = 0.0025211, Max = 0.0532739, Avg = 0.0030097459
+Score: Min = 44891, Max = 55247, Avg = 47664.46

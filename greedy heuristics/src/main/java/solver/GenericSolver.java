@@ -52,6 +52,10 @@ public abstract class GenericSolver {
         return methodName;
     }
 
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
+    }
+
     /** Method to be implemented by subclasses to solve the problem.
      * @param startNodeID The ID of the starting node for the solution.
      *
