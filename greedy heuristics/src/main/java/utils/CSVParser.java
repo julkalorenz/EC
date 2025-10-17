@@ -13,17 +13,6 @@ public class CSVParser {
     private final String filePath;
     private final String delimiter;
 
-    public static void main(String[] args) {
-        String filePath = "src/main/data/TSPA.csv";
-        String delimiter = ";";
-        CSVParser parser = new CSVParser(filePath, delimiter);
-        List<Node> nodes = parser.getNodes();
-        for (Node node : nodes) {
-            System.out.println("Node ID: " + node.getId() + ", X: " + node.getX() + ", Y: " + node.getY()+", Cost: " + node.getCost());
-        }
-
-    }
-
     public CSVParser(String filePath, String delimiter) {
         this.filePath = filePath;
         this.delimiter = delimiter;
