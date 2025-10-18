@@ -1,0 +1,21 @@
+scoreWeight: 0.5
+regretWeight: 0.5
+
+TSPA:
+Time (seconds): Min = 0.0026378, Max = 0.043409, Avg = 0.0040036477
+Score: Min = 70833, Max = 77783, Avg = 73112.07
+
+TSPB:
+Time (seconds): Min = 0.0026104, Max = 0.0457813, Avg = 0.0039641797
+Score: Min = 46650, Max = 55943, Avg = 51294.61
+
+scoreWeight: 0.7
+regretWeight: 0.3
+
+TSPA:
+Time (seconds): Min = 0.0026054, Max = 0.0429805, Avg = 0.0039379937
+Score: Min = 70706, Max = 75425, Avg = 72692.68
+
+TSPB:
+Time (seconds): Min = 0.002648, Max = 0.0465735, Avg = 0.004045775
+Score: Min = 47269, Max = 54730, Avg = 50336.88

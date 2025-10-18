@@ -78,27 +78,4 @@ public class GreedyCycleSolver extends GenericSolver{
         return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), finalPath, getMethodName());
     }
 
-    public static void main(String[] args) {
-        String filePath = "src/main/data/TSPA.csv";
-        String delimiter = ";";
-        main.java.utils.CSVParser parser = new main.java.utils.CSVParser(filePath, delimiter);
-        List<Node> nodes = parser.getNodes();
-        int[][] distanceMatrix = parser.getDistanceMatrix();
-        int[][] objectiveMatrix = parser.getObjectiveMatrix();
-        int[] costs = parser.getCosts();
-        GreedyCycleSolver greedyCycleSolver = new GreedyCycleSolver(distanceMatrix, objectiveMatrix, costs, nodes);
-        Solution solution = greedyCycleSolver.getSolution(0);
-
-        System.out.println("Total Distance: " + solution.getTotalDistance());
-        System.out.println("Total Objective: " + solution.getTotalObjective());
-
-        System.out.print("Path: ");
-        for (int node : solution.getPath()) {
-            System.out.print(node + " ");
-        }
-        solution.saveAsImage("results/GreedyCycle/greedy_cycle_solution.png");
-        solution.displaySolution();
-        solution.savePath("results/GreedyCycle/greedy_cycle_path.txt");
-
-    }
 }

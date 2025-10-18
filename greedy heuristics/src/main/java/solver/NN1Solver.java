@@ -52,21 +52,4 @@ public class NN1Solver extends GenericSolver{
 
     }
 
-    public static void main(String[] args) {
-        CSVParser parser = new CSVParser("greedy heuristics/src/main/data/TSPA.csv", ";");
-
-        int[][] distanceMatrix = parser.getDistanceMatrix();
-        int[][] objectiveMatrix = parser.getObjectiveMatrix();
-        List<Node> nodes = parser.getNodes();
-        int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-
-        Solution solution = new NN1Solver(distanceMatrix, objectiveMatrix, costs, nodes).getSolution(0);
-        System.out.println("Total Distance: " + solution.getTotalDistance());
-
-        System.out.print("Path: ");
-        for (int node : solution.getPath()) {
-            System.out.print(node + " ");
-        }
-        solution.displaySolution();
-    }
 }

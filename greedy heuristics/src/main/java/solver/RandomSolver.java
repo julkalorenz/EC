@@ -34,25 +34,4 @@ public class RandomSolver extends GenericSolver {
         cycle[nodesInCycle] = cycle[0];
         return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), cycle, getMethodName());
     }
-
-    public static void main(String[] args) {
-        String filePath = "src/main/data/TSPA.csv";
-        String delimiter = ";";
-        CSVParser parser = new CSVParser(filePath, delimiter);
-        List<Node> nodes = parser.getNodes();
-        int[][] distanceMatrix = parser.getDistanceMatrix();
-        int[][] objectiveMatrix = parser.getObjectiveMatrix();
-        int[] costs = parser.getCosts();
-        RandomSolver randomSolver = new RandomSolver(distanceMatrix, objectiveMatrix, costs, nodes);
-        Solution solution = randomSolver.getSolution(0);
-
-        System.out.println("Total Distance: " + solution.getTotalDistance());
-
-        System.out.print("Path: ");
-        for (int node : solution.getPath()) {
-            System.out.print(node + " ");
-        }
-        solution.displaySolution();
-
-    }
 }
