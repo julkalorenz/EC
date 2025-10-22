@@ -13,4 +13,17 @@ public class Move {
         this.startNodeID = startNodeID;
         this.endNodeID = endNodeID;
     }
+    public String getType() {
+        return type;
+    }
+    public String getIntraType() {
+        return intraType;
+    }
+    public int getStartNodeID() {
+        return startNodeID;
+    }
+    public int getEndNodeID() {
+        return endNodeID;
+    }
+
 }
