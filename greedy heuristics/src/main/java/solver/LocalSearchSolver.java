@@ -328,14 +328,12 @@ public class LocalSearchSolver extends GenericSolver {
                 }
             }
             iteration++;
+            currentSolution.setIterationCount(iteration);
             if (!improved) {
-                System.out.println("Local Search converged after " + iteration + " iterations.");
                 return currentSolution;// no improving move found -> end Local Search
             }
         }
     }
-
-
 
 
     @Override
@@ -343,6 +341,7 @@ public class LocalSearchSolver extends GenericSolver {
         // 1. generate initial solution of size ceil(n/2) - random or greedy
         Set<Integer> allNodeIDs = getNodes().stream().map(Node::getId).collect(Collectors.toSet());
         Solution currentSolution = getStartSolution(startNodeID);
+        currentSolution.setIterationCount(0);
         // 2. perform LS checking each neighbor, until no better solution is found in the neighborhood
         if (Objects.equals(localSearchType, "Greedy")) {
             return greedyLocalSearch(currentSolution, allNodeIDs);
