@@ -21,16 +21,23 @@ public class Solution {
     private int[][] distanceMatrix;
     private int[] costs;
     private int[] path; // Array of node IDs (indexes in nodesList) IMPORTANT: should start and end with the same node
-
     private String methodName;
+    private int iterationCount;
 
-    public Solution(List<Node> nodes, int[][] objectiveMatrix, int[][] distanceMatrix, int[] costs, int[] path, String methodName) {
+    public Solution(List<Node> nodes, int[][] objectiveMatrix, int[][] distanceMatrix,
+                    int[] costs, int[] path, String methodName) {
         this.nodes = nodes;
         this.objectiveMatrix = objectiveMatrix;
         this.distanceMatrix = distanceMatrix;
         this.costs = costs;
         this.path = path;
         this.methodName = methodName;
+    }
+
+    public Solution(List<Node> nodes, int[][] objectiveMatrix, int[][] distanceMatrix,
+                    int[] costs, int[] path, String methodName, int iterationCount) {
+        this(nodes, objectiveMatrix, distanceMatrix, costs, path, methodName);
+        this.iterationCount = iterationCount;
     }
 
     public int getTotalDistance() {
@@ -69,6 +76,15 @@ public class Solution {
     public int[] getPath() {
         return path;
     }
+
+    public int getIterationCount() {
+        return iterationCount;
+    }
+
+    public void setIterationCount(int iterationCount) {
+        this.iterationCount = iterationCount;
+    }
+
     public void displaySolution() {
         SolutionDrawer drawer = new SolutionDrawer(nodes, path);
         JFrame frame = new JFrame("Solution");

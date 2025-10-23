@@ -18,23 +18,58 @@ import main.java.utils.CSVParser;
 public class Main{
     public static void main(String[] args) {
 
+//        String dataset = "TSPA";
+//        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
+//
+//
+//        int[][] distanceMatrix = parser.getDistanceMatrix();
+//        int[][] objectiveMatrix = parser.getObjectiveMatrix();
+//        List<Node> nodes = parser.getNodes();
+//        int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
+//        GenericSolver solver = new LocalSearchSolver(
+//                distanceMatrix,
+//                objectiveMatrix,
+//                costs,
+//                nodes,
+//                "Greedy",
+//                "Edge",
+//                "Greedy");
+//        Experiment experiment = new Experiment(solver, dataset);
+//
+//        experiment.runExperiment();
+//        experiment.printStats();
 
-        String dataset = "TSPB";
-        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
-
-
-        int[][] distanceMatrix = parser.getDistanceMatrix();
-        int[][] objectiveMatrix = parser.getObjectiveMatrix();
-        List<Node> nodes = parser.getNodes();
-        int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-
-        // Example: assume generic solver is not abstract
-        GenericSolver solver = new GreedyCycle2RegretWeightedSolver(distanceMatrix,objectiveMatrix, costs, nodes, 0.5, 0.5);
-
-        Experiment experiment = new Experiment(solver, dataset);
-
-        experiment.runExperiment();
-        experiment.printStats();
-
+//        String[] typeLS = {"Greedy", "Steepest"};
+        String[] typeLS = {"Greedy"};
+        String[] neighborhoodLS = {"Node", "Edge"};
+        String[] initialSolutionLS = {"Greedy", "Random"};
+        String[] datasets = {"TSPA", "TSPB"};
+        for (String type : typeLS) {
+            for (String neighborhood : neighborhoodLS) {
+                for (String initialSolution : initialSolutionLS) {
+                    for (String dataset: datasets) {
+                        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
+                        int[][] distanceMatrix = parser.getDistanceMatrix();
+                        int[][] objectiveMatrix = parser.getObjectiveMatrix();
+                        List<Node> nodes = parser.getNodes();
+                        int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
+                        System.out.println("Running Local Search with Type: " + type + ", Neighborhood: " + neighborhood
+                                + ", Initial Solution: " + initialSolution + " on Dataset: " + dataset);
+                        GenericSolver solver = new LocalSearchSolver(
+                                distanceMatrix,
+                                objectiveMatrix,
+                                costs,
+                                nodes,
+                                type,
+                                neighborhood,
+                                initialSolution);
+                        Experiment experiment = new Experiment(solver, dataset);
+                        experiment.runExperiment();
+                        experiment.printStats();
+                        System.out.println("--------------------------------------------------");
+                    }
+                }
+            }
+        }
     }
 }
