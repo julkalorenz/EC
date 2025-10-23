@@ -140,14 +140,14 @@ public class Experiment {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
             writer.write(datasetName + ":\n");
             writer.write(String.format(Locale.US,
-                    "Time (seconds): Min = %.4f, Max = %.4f, Avg = %.4f%n",
-                    minTime, maxTime, avgTime));
+                    "Time (seconds): %.4f (%.4f, %.4f)%n",
+                    avgTime, minTime, maxTime));
             writer.write(String.format(Locale.US,
-                    "Score: Min = %d, Max = %d, Avg = %.2f%n",
-                    minScore, maxScore, avgScore));
+                    "Score: %.2f (%d, %d)%n",
+                    avgScore, minScore, maxScore));
             writer.write(String.format(Locale.US,
-                    "Iterations: Min = %d, Max = %d, Avg = %.2f%n",
-                    minIters, maxIters, avgIters));
+                    "Iterations: %.2f (%d, %d)%n",
+                    avgIters, minIters, maxIters));
             writer.write("\n");
         } catch (IOException e) {
             e.printStackTrace();
