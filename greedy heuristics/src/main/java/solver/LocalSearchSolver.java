@@ -90,48 +90,76 @@ public class LocalSearchSolver extends GenericSolver {
      * @return change in cost (delta): positive if worse, negative if better
      */
     public int deltaNodeExchange(int nodeID1, int nodeID2, Solution currentSolution) {
-        // two nodes: nodeID1, nodeID2 -> swap their positions in the cycle
-
-        // find positions of nodeID1 and nodeID2
+        // Find positions of nodeID1 and nodeID2
         int[] path = currentSolution.getPath();
         int pos1 = -1;
         int pos2 = -1;
         for (int i = 0; i < path.length - 1; i++) {
             if (path[i] == nodeID1) {
                 pos1 = i;
-                if (pos2 != -1) {
-                    break;
-                }
+                if (pos2 != -1) break;
             } else if (path[i] == nodeID2) {
                 pos2 = i;
-                if (pos1 != -1) {
-                    break;
-                }
+                if (pos1 != -1) break;
             }
         }
-        if (Math.abs(pos1 - pos2) == 1 ||
-                (pos1 == 0 && pos2 == path.length - 2) ||
-                (pos2 == 0 && pos1 == path.length - 2)) {
-            // For adjacent nodes, swapping only changes the direction of travel
-            // Since distance matrix is symmetric, delta is 0
-            return 0;
+
+        // Ensure pos1 < pos2 for consistency
+        if (pos1 > pos2) {
+            int temp = pos1;
+            pos1 = pos2;
+            pos2 = temp;
+            int tempID = nodeID1;
+            nodeID1 = nodeID2;
+            nodeID2 = tempID;
         }
 
-        // get predecessors and successors
-        // Cyclic predecessor and successor for pos1
-        int pred1 = (pos1 == 0) ? path[path.length - 2] : path[pos1 - 1];
-        int succ1 = path[pos1 + 1];
-        // Cyclic predecessor and successor for pos2
-        int pred2 = (pos2 == 0) ? path[path.length - 2] : path[pos2 - 1];
-        int succ2 = path[pos2 + 1];
+        int n = path.length - 1; // excluding the duplicate end node
 
-        // compute delta
-        int oldCost = getDistanceMatrix()[pred1][nodeID1] + getDistanceMatrix()[nodeID1][succ1]
-                + getDistanceMatrix()[pred2][nodeID2] + getDistanceMatrix()[nodeID2][succ2];
-        int newCost = getDistanceMatrix()[pred1][nodeID2] + getDistanceMatrix()[nodeID2][succ1]
-                + getDistanceMatrix()[pred2][nodeID1] + getDistanceMatrix()[nodeID1][succ2];
+        int pred1 = path[(pos1 - 1 + n) % n];
+        int succ1 = path[(pos1 + 1) % n];
+        int pred2 = path[(pos2 - 1 + n) % n];
+        int succ2 = path[(pos2 + 1) % n];
 
-        return newCost - oldCost; // positive if worse, negative if better
+        // Check if adjacent
+        boolean adjacent = (pos2 - pos1 == 1);
+        boolean wrapAroundAdjacent = (pos1 == 0 && pos2 == n - 1);
+
+        int oldCost, newCost;
+
+        if (adjacent) {
+            // Adjacent case: A -> node1 -> node2 -> B
+            // becomes:      A -> node2 -> node1 -> B
+            oldCost = getDistanceMatrix()[pred1][nodeID1]
+                   + getDistanceMatrix()[nodeID2][succ2];
+
+            newCost = getDistanceMatrix()[pred1][nodeID2]
+                    + getDistanceMatrix()[nodeID1][succ2];
+        } else if (wrapAroundAdjacent) {
+        // Wrap-around adjacency: nodeID2 at end, nodeID1 at start
+        // Old edges: pred2 -> nodeID2, nodeID2 -> nodeID1, nodeID1 -> succ1
+        oldCost = getDistanceMatrix()[pred2][nodeID2]
+                + getDistanceMatrix()[nodeID2][nodeID1]
+                + getDistanceMatrix()[nodeID1][succ1];
+
+        // New edges after swap: pred2 -> nodeID1, nodeID1 -> nodeID2, nodeID2 -> succ1
+        newCost = getDistanceMatrix()[pred2][nodeID1]
+                + getDistanceMatrix()[nodeID1][nodeID2]
+                + getDistanceMatrix()[nodeID2][succ1];
+        } else {
+            // Non-adjacent case
+            oldCost = getDistanceMatrix()[pred1][nodeID1] +
+                    getDistanceMatrix()[nodeID1][succ1] +
+                    getDistanceMatrix()[pred2][nodeID2] +
+                    getDistanceMatrix()[nodeID2][succ2];
+
+            newCost = getDistanceMatrix()[pred1][nodeID2] +
+                    getDistanceMatrix()[nodeID2][succ1] +
+                    getDistanceMatrix()[pred2][nodeID1] +
+                    getDistanceMatrix()[nodeID1][succ2];
+        }
+
+        return newCost - oldCost;
     }
 
     /**
@@ -248,6 +276,12 @@ public class LocalSearchSolver extends GenericSolver {
                     if (pos1 != -1 && pos2 != -1) break;
                 }
                 // swap
+                // if either pos1 or pos2 is 0 then also need to swap the last element (end node)
+                if (pos1 == 0) {
+                    newCycle[newCycle.length - 1] = move.getEndNodeID();
+                } else if (pos2 == 0) {
+                    newCycle[newCycle.length - 1] = move.getStartNodeID();
+                }
                 int temp = newCycle[pos1];
                 newCycle[pos1] = newCycle[pos2];
                 newCycle[pos2] = temp;
@@ -255,7 +289,7 @@ public class LocalSearchSolver extends GenericSolver {
                 // if intra edge exchange - reverse the segment between the two edges
                 int pos1 = -1;
                 int pos2 = -1;
-                for (int i = 0; i < newCycle.length; i++) {
+                for (int i = 0; i < newCycle.length-1; i++) {
                     if (newCycle[i] == move.getStartNodeID()) pos1 = i;
                     else if (newCycle[i] == move.getEndNodeID()) pos2 = i;
                     if (pos1 != -1 && pos2 != -1) break;
@@ -299,7 +333,6 @@ public class LocalSearchSolver extends GenericSolver {
             Collections.shuffle(neighborhood);
             boolean improved = false;
             for (Move move: neighborhood) {
-                // evaluate move
                 int delta;
                 if (Objects.equals(move.getType(), "Inter")) {
                     delta = deltaNodeSwap(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
@@ -338,11 +371,9 @@ public class LocalSearchSolver extends GenericSolver {
 
     @Override
     public Solution getSolution(int startNodeID) {
-        // 1. generate initial solution of size ceil(n/2) - random or greedy
         Set<Integer> allNodeIDs = getNodes().stream().map(Node::getId).collect(Collectors.toSet());
         Solution currentSolution = getStartSolution(startNodeID);
         currentSolution.setIterationCount(0);
-        // 2. perform LS checking each neighbor, until no better solution is found in the neighborhood
         if (Objects.equals(localSearchType, "Greedy")) {
             return greedyLocalSearch(currentSolution, allNodeIDs);
         }
@@ -352,7 +383,7 @@ public class LocalSearchSolver extends GenericSolver {
     public static void main(String[] args) {
         // Example usage of LocalSearchSolver
         String type = "Greedy";
-        String neighborhood = "Node";
+        String neighborhood = "Edge";
         String start = "Random";
         String dataset = "TSPB";
         CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
@@ -373,8 +404,5 @@ public class LocalSearchSolver extends GenericSolver {
         System.out.println(solver.getMethodName());
         Solution solution = solver.getSolution(0);
         System.out.println("Solution Score: " + solution.getScore());
-
-
     }
-
 }
