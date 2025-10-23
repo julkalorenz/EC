@@ -368,6 +368,60 @@ public class LocalSearchSolver extends GenericSolver {
         }
     }
 
+    public Solution steepestLocalSearch(Solution currentSolution, Set<Integer> allNodeIDs) {
+        Set<Integer> selectedNodeIDs = Arrays.stream(currentSolution.getPath()).boxed().collect(Collectors.toSet());
+        Set<Integer> nonSelectedNodeIDs = new HashSet<>(allNodeIDs);
+        nonSelectedNodeIDs.removeAll(selectedNodeIDs);
+
+        int iteration = 0;
+        while (true) {
+            List<Move> neighborhood = getNeighborhood(currentSolution, nonSelectedNodeIDs, allNodeIDs);
+
+            boolean improved = false;
+
+            int bestDelta = Integer.MAX_VALUE;
+            Move bestMove = null;
+
+            for (Move move: neighborhood) {
+                int delta;
+                if (Objects.equals(move.getType(), "Inter")) {
+                    delta = deltaNodeSwap(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
+                } else if (Objects.equals(move.getType(), "Intra")) {
+                    if (Objects.equals(move.getIntraType(), "Node")) {
+                        delta = deltaNodeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
+                    } else if (Objects.equals(move.getIntraType(), "Edge")) {
+                        delta = deltaEdgeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
+                    } else {
+                        continue; // unknown intra type
+                    }
+                } else {
+                    continue; // unknown move type
+                }
+                if (delta < bestDelta) {
+                    bestDelta = delta;
+                    bestMove = move;
+                }
+
+            }
+            if (bestDelta < 0) {
+                currentSolution = applyMove(currentSolution, bestMove);
+                // update selected and non-selected node IDs
+                if (Objects.equals(bestMove.getType(), "Inter")) {
+                    selectedNodeIDs.remove(bestMove.getStartNodeID());
+                    selectedNodeIDs.add(bestMove.getEndNodeID());
+                    nonSelectedNodeIDs.add(bestMove.getStartNodeID());
+                    nonSelectedNodeIDs.remove(bestMove.getEndNodeID());
+                }
+                improved = true;
+            }
+            iteration++;
+            currentSolution.setIterationCount(iteration);
+            if (!improved) {
+                return currentSolution;// no improving move found -> end Local Search
+            }
+        }
+    }
+
 
     @Override
     public Solution getSolution(int startNodeID) {
@@ -377,15 +431,18 @@ public class LocalSearchSolver extends GenericSolver {
         if (Objects.equals(localSearchType, "Greedy")) {
             return greedyLocalSearch(currentSolution, allNodeIDs);
         }
+        else if (Objects.equals(localSearchType, "Steepest")) {
+            return steepestLocalSearch(currentSolution, allNodeIDs);
+        }
         return null;
     }
 
     public static void main(String[] args) {
         // Example usage of LocalSearchSolver
-        String type = "Greedy";
+        String type = "Steepest";
         String neighborhood = "Edge";
         String start = "Random";
-        String dataset = "TSPB";
+        String dataset = "TSPA";
         CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
         int[][] distanceMatrix = parser.getDistanceMatrix();
         int[][] objectiveMatrix = parser.getObjectiveMatrix();

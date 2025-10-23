@@ -39,8 +39,8 @@ public class Main{
 //        experiment.runExperiment();
 //        experiment.printStats();
 
-//        String[] typeLS = {"Greedy", "Steepest"};
-        String[] typeLS = {"Greedy"};
+        String[] typeLS = {"Greedy", "Steepest"};
+        //String[] typeLS = {"Steepest"};
         String[] neighborhoodLS = {"Node", "Edge"};
         String[] initialSolutionLS = {"Greedy", "Random"};
         String[] datasets = {"TSPA", "TSPB"};
