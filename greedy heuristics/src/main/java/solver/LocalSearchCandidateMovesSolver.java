@@ -10,6 +10,7 @@ import main.java.utils.CSVParser;
 public class LocalSearchCandidateMovesSolver extends LocalSearchSolver{
 
     private int candidateNeighborsCount;
+    private Map<Integer, int[]> nearestNeighborsCache = new HashMap<>();
     // Steepest LS
     // Edge Exchange Intra-Route Neighborhood
     // Random Initial Solution
@@ -28,6 +29,10 @@ public class LocalSearchCandidateMovesSolver extends LocalSearchSolver{
         );
         this.candidateNeighborsCount = candidateNeighborsCount;
         setMethodName("LocalSearchCandidateMovesSolver");
+
+        for (int i = 0; i < distanceMatrix.length; i++) {
+            nearestNeighborsCache.put(i, findNearestNeighbors(i));
+        }
     }
 
     public int[] findNearestNeighbors(int currID) {
@@ -86,7 +91,7 @@ public class LocalSearchCandidateMovesSolver extends LocalSearchSolver{
         List<Move> neighborhood = new ArrayList<>();
 
         for (int nodeID: selectedNodeIDs) {
-            int[] NNs = findNearestNeighbors(nodeID);
+            int[] NNs = nearestNeighborsCache.get(nodeID);
             int nodePos = positionMap.get(nodeID);
             int predNodeID = cycle[(nodePos - 1 + n) % n];
             int succNodeID = cycle[(nodePos + 1) % n];
