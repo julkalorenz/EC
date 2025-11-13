@@ -215,28 +215,19 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
         Set<Integer> affected = new HashSet<>();
 
         if (move.getType().equals("Inter")) {
+            // For inter-route moves: the swapped nodes and their neighbors
             affected.add(move.getStartNodeID());
             affected.add(move.getEndNodeID());
-            affected.add(move.getEdge1End());
-            affected.add(move.getEdge2End());
+            affected.add(move.getEdge1End());  // successor of old node
+            affected.add(move.getEdge2End());  // predecessor of old node
         } else if (move.getType().equals("Intra") && move.getIntraType().equals("Edge")) {
-            int pos1 = findNodePosition(pathBeforeMove, move.getStartNodeID());
-            int pos2 = findNodePosition(pathBeforeMove, move.getEndNodeID());
-
-            if (pos1 > pos2) {
-                int temp = pos1;
-                pos1 = pos2;
-                pos2 = temp;
-            }
-
-            affected.add(move.getStartNodeID());
-            affected.add(move.getEdge1End());
-            affected.add(move.getEndNodeID());
-            affected.add(move.getEdge2End());
-
-            for (int i = pos1 + 1; i <= pos2; i++) {
-                affected.add(pathBeforeMove[i]);
-            }
+            // For edge exchange: only the 4 edge endpoints are affected
+            // Their incident edges changed, so moves involving them need recalculation
+            // Interior nodes of reversed segment don't need move regeneration
+            affected.add(move.getStartNodeID());  // edge1 start
+            affected.add(move.getEdge1End());     // edge1 end
+            affected.add(move.getEndNodeID());    // edge2 start  
+            affected.add(move.getEdge2End());     // edge2 end
         }
 
         return affected;
@@ -252,6 +243,7 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
         int[] currentPath = currentSolution.getPath();
 
         // Generate inter moves involving affected nodes
+        // Only affected nodes need their inter-route moves recalculated
         for (int affectedNode : affectedNodes) {
             if (selectedNodeIDs.contains(affectedNode)) {
                 // Generate inter moves: swap this node with outside nodes
@@ -270,29 +262,34 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
         }
 
         // Generate intra edge exchange moves involving affected nodes
-        for (int affectedNode : affectedNodes) {
-            if (selectedNodeIDs.contains(affectedNode)) {
-                int affectedPos = findNodePosition(currentPath, affectedNode);
-                if (affectedPos == -1) continue;
+        // Key optimization: only generate moves between pairs of affected nodes
+        // or between one affected and one non-affected node
+        List<Integer> affectedList = new ArrayList<>(affectedNodes);
+        
+        for (int i = 0; i < affectedList.size(); i++) {
+            int affectedNode = affectedList.get(i);
+            if (!selectedNodeIDs.contains(affectedNode)) continue;
+            
+            int affectedPos = findNodePosition(currentPath, affectedNode);
+            if (affectedPos == -1) continue;
 
-                // Generate edge exchanges with this node's edges
-                for (int i = 0; i < currentPath.length - 1; i++) {
-                    int otherNode = currentPath[i];
-                    if (!affectedNodes.contains(otherNode) && selectedNodeIDs.contains(otherNode)) {
-                        // Skip if edges are adjacent
-                        if (Math.abs(affectedPos - i) < 2) continue;
-                        if (affectedPos == 0 && i == currentPath.length - 2) continue;
+            // Generate moves with all other selected nodes (both affected and non-affected)
+            for (int j = 0; j < currentPath.length - 1; j++) {
+                int otherNode = currentPath[j];
+                if (otherNode == affectedNode) continue;
+                
+                // Skip if edges are adjacent
+                if (Math.abs(affectedPos - j) < 2) continue;
+                if (affectedPos == 0 && j == currentPath.length - 2) continue;
 
-                        int delta = deltaEdgeExchange(affectedNode, otherNode, currentSolution);
-                        Move move = new Move("Intra", "Edge", affectedNode, otherNode, delta);
-                        DeltaMove deltaMove = Move2DeltaMove(move, currentSolution);
+                int delta = deltaEdgeExchange(affectedNode, otherNode, currentSolution);
+                Move move = new Move("Intra", "Edge", affectedNode, otherNode, delta);
+                DeltaMove deltaMove = Move2DeltaMove(move, currentSolution);
 
-                        String signature = deltaMove.getSignature();
-                        if (!moveSignatures.contains(signature)) {
-                            moveQueue.offer(deltaMove);
-                            moveSignatures.add(signature);
-                        }
-                    }
+                String signature = deltaMove.getSignature();
+                if (!moveSignatures.contains(signature)) {
+                    moveQueue.offer(deltaMove);
+                    moveSignatures.add(signature);
                 }
             }
         }
