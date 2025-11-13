@@ -217,18 +217,22 @@ public class LocalSearchSolver extends GenericSolver {
         selectedNodeIDs.removeAll(nonSelectedNodeIDs);
         List<Move> allMoves = new ArrayList<>();
         int[] cycle = currentSolution.getPath();
+        int delta;
 
         for (int inNodeID: selectedNodeIDs) {
             for (int outNodeID: nonSelectedNodeIDs) {
-                Move move = new Move("Inter", "-", inNodeID, outNodeID);
+                delta = deltaNodeSwap(inNodeID, outNodeID, currentSolution);
+                Move move = new Move("Inter", "-", inNodeID, outNodeID, delta);
                 allMoves.add(move);
             }
         }
         // 2. generate all intra moves (node exchanges OR edge exchanges) depending on neighborhoodType
         if (Objects.equals(neighborhoodType, "Node")) {
             for (int i = 0; i < cycle.length - 1; i++) {
+
                 for (int j = i + 1; j < cycle.length - 1; j++) {
-                    Move move = new Move("Intra", "Node", cycle[i], cycle[j]);
+                    delta = deltaNodeExchange(cycle[i], cycle[j], currentSolution);
+                    Move move = new Move("Intra", "Node", cycle[i], cycle[j], delta);
                     allMoves.add(move);
                 }
             }
@@ -239,7 +243,8 @@ public class LocalSearchSolver extends GenericSolver {
                     if (i == 0 && j == cycle.length - 2) {
                         continue; // skip if first and last edge (they are adjacent in a cycle)
                     }
-                    Move move = new Move("Intra", "Edge", cycle[i], cycle[j]);
+                    delta = deltaEdgeExchange(cycle[i], cycle[j], currentSolution);
+                    Move move = new Move("Intra", "Edge", cycle[i], cycle[j], delta);
                     allMoves.add(move);
                 }
             }
@@ -325,6 +330,7 @@ public class LocalSearchSolver extends GenericSolver {
         Set<Integer> selectedNodeIDs = Arrays.stream(currentSolution.getPath()).boxed().collect(Collectors.toSet());
         Set<Integer> nonSelectedNodeIDs = new HashSet<>(allNodeIDs);
         nonSelectedNodeIDs.removeAll(selectedNodeIDs);
+        int delta;
 
         int iteration = 0;
         while (true) {
@@ -333,20 +339,7 @@ public class LocalSearchSolver extends GenericSolver {
             Collections.shuffle(neighborhood);
             boolean improved = false;
             for (Move move: neighborhood) {
-                int delta;
-                if (Objects.equals(move.getType(), "Inter")) {
-                    delta = deltaNodeSwap(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                } else if (Objects.equals(move.getType(), "Intra")) {
-                    if (Objects.equals(move.getIntraType(), "Node")) {
-                        delta = deltaNodeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                    } else if (Objects.equals(move.getIntraType(), "Edge")) {
-                        delta = deltaEdgeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                    } else {
-                        continue; // unknown intra type
-                    }
-                } else {
-                    continue; // unknown move type
-                }
+                delta = move.getDelta();
                 if (delta < 0) { // found first improving move
                     currentSolution = applyMove(currentSolution, move);
                     // update selected and non-selected node IDs
@@ -372,6 +365,7 @@ public class LocalSearchSolver extends GenericSolver {
         Set<Integer> selectedNodeIDs = Arrays.stream(currentSolution.getPath()).boxed().collect(Collectors.toSet());
         Set<Integer> nonSelectedNodeIDs = new HashSet<>(allNodeIDs);
         nonSelectedNodeIDs.removeAll(selectedNodeIDs);
+        int delta;
 
         int iteration = 0;
         while (true) {
@@ -383,20 +377,7 @@ public class LocalSearchSolver extends GenericSolver {
             Move bestMove = null;
 
             for (Move move: neighborhood) {
-                int delta;
-                if (Objects.equals(move.getType(), "Inter")) {
-                    delta = deltaNodeSwap(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                } else if (Objects.equals(move.getType(), "Intra")) {
-                    if (Objects.equals(move.getIntraType(), "Node")) {
-                        delta = deltaNodeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                    } else if (Objects.equals(move.getIntraType(), "Edge")) {
-                        delta = deltaEdgeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
-                    } else {
-                        continue; // unknown intra type
-                    }
-                } else {
-                    continue; // unknown move type
-                }
+                delta = move.getDelta();
                 if (delta < bestDelta) {
                     bestDelta = delta;
                     bestMove = move;

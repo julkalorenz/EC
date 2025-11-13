@@ -2,16 +2,21 @@ package main.java.models;
 
 public class Move {
 
-    private String type;
-    private String intraType;
-    private int startNodeID;
-    private int endNodeID;
+    protected String type;
+    protected String intraType;
+    protected int startNodeID;
+    protected int endNodeID;
 
-    public Move(String type, String intraType, int startNodeID, int endNodeID) {
+    protected int delta;
+
+
+    public Move(String type, String intraType, int startNodeID, int endNodeID, int delta) {
         this.type = type;
         this.intraType = intraType;
         this.startNodeID = startNodeID;
         this.endNodeID = endNodeID;
+        this.delta = delta;
+
     }
     public String getType() {
         return type;
@@ -24,6 +29,12 @@ public class Move {
     }
     public int getEndNodeID() {
         return endNodeID;
+    }
+    public int getDelta() {
+        return delta;
+    }
+    public void setDelta(int delta) {
+        this.delta = delta;
     }
 
 }

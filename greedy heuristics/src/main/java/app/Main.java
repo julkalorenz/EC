@@ -25,12 +25,11 @@ public class Main{
             int[][] objectiveMatrix = parser.getObjectiveMatrix();
             List<Node> nodes = parser.getNodes();
             int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-            GenericSolver solver = new LocalSearchCandidateMovesSolver(
+            GenericSolver solver = new LocalSearchDeltaSolver(
                     distanceMatrix,
                     objectiveMatrix,
                     costs,
-                    nodes,
-                    10
+                    nodes
             );
             Experiment experiment = new Experiment(solver, data);
             experiment.runExperiment();

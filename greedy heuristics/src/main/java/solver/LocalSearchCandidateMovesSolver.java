@@ -99,23 +99,26 @@ public class LocalSearchCandidateMovesSolver extends LocalSearchSolver{
             for (int nnID: NNs) {
                 // case 1: nn not in the cycle -> generate node-swap moves
                 if (nonSelectedNodeIDs.contains(nnID)) {
-                    Move move1 = new Move("Inter", "-", predNodeID, nnID);
+                    int delta = deltaNodeSwap(predNodeID, nnID, currentSolution);
+                    Move move1 = new Move("Inter", "-", predNodeID, nnID, delta);
                     neighborhood.add(move1);
-                    Move move2 = new Move("Inter", "-", succNodeID, nnID);
+                    Move move2 = new Move("Inter", "-", succNodeID, nnID, delta);
                     neighborhood.add(move2);
                 }
                 // case 2: nn in the cycle -> generate edge-exchange moves
                 else if (selectedNodeIDs.contains(nnID)) {
                     // find nn position in cycle
+
                     int nnPos = positionMap.get(nnID);
                     int predNNID = cycle[(nnPos - 1 + n) % n];
                     int succNNID = cycle[(nnPos + 1) % n];
 
                     // edges cannot be adjacent
                     if (predNNID != nodeID && succNNID != nodeID) {
-                        Move move1 = new Move("Intra", "Edge", predNodeID, predNNID);
+                        int delta = deltaEdgeExchange(nodeID, nnID, currentSolution);
+                        Move move1 = new Move("Intra", "Edge", predNodeID, predNNID, delta);
                         neighborhood.add(move1);
-                        Move move2 = new Move("Intra", "Edge", nodeID, nnID);
+                        Move move2 = new Move("Intra", "Edge", nodeID, nnID, delta);
                         neighborhood.add(move2);
                     }
                 }
