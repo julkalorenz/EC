@@ -224,10 +224,31 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
             // For edge exchange: only the 4 edge endpoints are affected
             // Their incident edges changed, so moves involving them need recalculation
             // Interior nodes of reversed segment don't need move regeneration
-            affected.add(move.getStartNodeID());  // edge1 start
-            affected.add(move.getEdge1End());     // edge1 end
-            affected.add(move.getEndNodeID());    // edge2 start  
-            affected.add(move.getEdge2End());     // edge2 end
+            int edge1Start = move.getEdge1Start();
+            int edge1End = move.getEdge1End();
+
+            int pos1 = -1;
+            int pos2 = -1;
+            for (int i = 0; i < pathBeforeMove.length; i++) {
+                if (pathBeforeMove[i] == edge1Start) {
+                    pos1 = i;
+                }
+                if (pathBeforeMove[i] == move.getEdge2Start()) {
+                    pos2 = i;
+                }
+            }
+
+            if(pos1>pos2){
+                int temp = pos1;
+                pos1 = pos2;
+                pos2 = temp;
+            }
+
+            for (int i = pos1; i <= pos2; i++) {
+                affected.add(pathBeforeMove[i]);
+            }
+
+
         }
 
         return affected;
