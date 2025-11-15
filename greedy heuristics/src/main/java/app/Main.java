@@ -25,7 +25,7 @@ public class Main{
             int[][] objectiveMatrix = parser.getObjectiveMatrix();
             List<Node> nodes = parser.getNodes();
             int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-            GenericSolver solver = new DeltaSolver2(
+            GenericSolver solver = new LocalSearchDeltaSolver(
                     distanceMatrix,
                     objectiveMatrix,
                     costs,

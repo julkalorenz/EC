@@ -6,15 +6,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class LocalSearchDeltaSolver extends LocalSearchSolver{
-    /**
-     * Local Searchh Solver that uses delta evaluations from previous iterations to speed up the process
-     * If a given delta is no longer valid (edges have changed), it will be recalculated
-     */
-
-    private PriorityQueue<DeltaMove> moveQueue;
+    private List<DeltaMove> moveList;
     private Set<String> moveSignatures;
-    private Set<DeltaMove> skippedMoves;
+
+    private Set<Edge> solutionEdges;
+    private Set<Integer> solutionNodes;
     private int currentIteration;
+
+    /// Maps a node identifier to its current index within the Hamiltonian cycle.
+    private Map<Integer, Integer> nodePositions;
+
+    // Number of iterations after which the entire neighborhood cache is rebuilt.
+    private static final int REBUILD_INTERVAL = 25;
+
 
     public LocalSearchDeltaSolver(int[][] distanceMatrix, int[][] objectiveMatrix, int[] costs, List<Node> nodes) {
         super(distanceMatrix,
@@ -27,49 +31,20 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
 
         setMethodName("LocalSearchDeltaSolver");
 
-        this.moveQueue = new PriorityQueue<>(Comparator.comparingInt(DeltaMove::getDelta));
+        this.moveList = new ArrayList<>();
+        this.solutionEdges = new HashSet<>();
+        this.solutionNodes = new HashSet<>();
         this.moveSignatures = new HashSet<>();
-        this.skippedMoves = new HashSet<>();
         this.currentIteration = 0;
-    }
-
-    private int findNodePosition(int[] path, int nodeID){
-        for (int i = 0; i < path.length; i++) {
-            if (path[i] == nodeID) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private boolean edgeExists(int[] path, int start, int end){
-        for (int i = 0; i < path.length - 1; i++) {
-            if ((path[i] == start && path[i + 1] == end) ||
-                    (path[i] == end && path[i + 1] == start)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean checkEdgeDirection(int[] path, int start, int end, boolean expectedForward) {
-        for (int i = 0; i < path.length - 1; i++) {
-            if (path[i] == start && path[i + 1] == end) {
-                return expectedForward;
-            }
-            if (path[i] == end && path[i + 1] == start) {
-                return !expectedForward;
-            }
-        }
-        return false;
+        this.nodePositions = new HashMap<>();
     }
 
     private DeltaMove Move2DeltaMove(Move move, Solution currentSolution){
         if (move.getType().equals("Intra") &&
-            move.getIntraType().equals("Edge")){
+                move.getIntraType().equals("Edge")){
             int[] path = currentSolution.getPath();
-            int posA = findNodePosition(path, move.getStartNodeID());
-            int posB = findNodePosition(path, move.getEndNodeID());
+            int posA = nodePositions.get(move.getStartNodeID());
+            int posB = nodePositions.get(move.getEndNodeID());
 
             int startNodeA = path[posA];
             int endNodeA = path[(posA + 1) % path.length];
@@ -77,8 +52,16 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
             int startNodeB = path[posB];
             int endNodeB = path[(posB + 1) % path.length];
 
-            boolean edge1Dir = true;
-            boolean edge2Dir = true;
+            Edge oldEdge1 = new Edge(startNodeA, endNodeA);
+            Edge oldEdge2 = new Edge(startNodeB, endNodeB);
+
+            int pos1 = Math.min(posA, posB);
+            int pos2 = Math.max(posA, posB);
+
+            int n = path.length - 1;
+            int predA = (posA == 0) ? path[n - 1] : path[posA - 1];
+            int succB = path[(posB + 1) % n];
+
 
             return new DeltaMove(
                     move.getType(),
@@ -86,10 +69,12 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
                     startNodeA,
                     startNodeB,
                     move.getDelta(),
-                    endNodeA,
-                    endNodeB,
-                    edge1Dir,
-                    edge2Dir
+                    oldEdge1,
+                    oldEdge2,
+                    pos1,
+                    pos2,
+                    predA,
+                    succB
             );
 
         } else if (move.getType().equals("Inter")) {
@@ -98,7 +83,7 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
             int oldNodeID = move.getStartNodeID();
             int newNodeID = move.getEndNodeID();
 
-            int oldNodePos = findNodePosition(path, oldNodeID);
+            int oldNodePos = nodePositions.get(oldNodeID);
 
             int n = path.length -1;
             int predecessorID = (oldNodePos == 0)
@@ -106,351 +91,521 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
                     : path[oldNodePos - 1];
             int successorID = path[(oldNodePos + 1) % n];
 
+            Edge oldEdge1 = new Edge(oldNodeID, successorID);
+            Edge oldEdge2 = new Edge(predecessorID, oldNodeID);
+
             return new DeltaMove(
                     move.getType(),
                     move.getIntraType(),
                     oldNodeID,
                     newNodeID,
                     move.getDelta(),
-                    successorID,
+                    oldEdge1,
+                    oldEdge2,
+                    oldNodePos,
+                    -1,  // pos2 not used for inter moves
                     predecessorID,
-                    true,
-                    true
+                    successorID
             );
         }
         return null;
     }
 
-    private MoveValidityStatus validateInterMove(DeltaMove move,
-                                                 Solution currentSolution,
-                                                 Set<Integer> nonSelectedNodeIDs) {
-        int oldNodeID = move.getStartNodeID();
-        int newNodeID = move.getEndNodeID();
-
-        if (!nonSelectedNodeIDs.contains(newNodeID)) {
-            return MoveValidityStatus.INVALID_REMOVE;
-        }
-
-        int[] path = currentSolution.getPath();
-        int oldNodePos = findNodePosition(path, oldNodeID);
-        if (oldNodePos == -1) {
-            return MoveValidityStatus.INVALID_REMOVE;
-        }
-
-        int n = path.length - 1;
-        int currentPred = (oldNodePos == 0) ? path[n - 1] : path[oldNodePos - 1];
-        int currentSucc = path[(oldNodePos + 1) % n];
-
-        int storedSucc = move.getEdge1End();
-        int storedPred = move.getEdge2End();
-
-        if (currentPred != storedPred || currentSucc != storedSucc) {
-            return MoveValidityStatus.RECALCULATE;
-        }
-
-        return MoveValidityStatus.VALID_APPLY;
-    }
-
-    private MoveValidityStatus validateIntraEdgeMove(DeltaMove move, Solution currentSolution) {
-        int[] path = currentSolution.getPath();
-
-        int edge1Start = move.getEdge1Start();
-        int edge1End = move.getEdge1End();
-        int edge2Start = move.getEdge2Start();
-        int edge2End = move.getEdge2End();
-
-        boolean edge1Exists = edgeExists(path, edge1Start, edge1End);
-        boolean edge2Exists = edgeExists(path, edge2Start, edge2End);
-
-        if (!edge1Exists || !edge2Exists) {
-            return MoveValidityStatus.INVALID_REMOVE;
-        }
-
-        boolean edge1SameDir = checkEdgeDirection(path, edge1Start, edge1End,
-                move.isEdge1Direction());
-        boolean edge2SameDir = checkEdgeDirection(path, edge2Start, edge2End,
-                move.isEdge2Direction());
-
-        if ((edge1SameDir && edge2SameDir) || (!edge1SameDir && !edge2SameDir)) {
-            return MoveValidityStatus.VALID_APPLY;
-        }
-
-        return MoveValidityStatus.VALID_SKIP;
-    }
-
-    private MoveValidityStatus checkMoveValidity(DeltaMove move,
-                                                 Solution currentSolution,
-                                                 Set<Integer> nonSelectedNodeIDs) {
-        if (move.getType().equals("Inter")) {
-            return validateInterMove(move, currentSolution, nonSelectedNodeIDs);
-        } else if (move.getType().equals("Intra") && move.getIntraType().equals("Edge")) {
-            return validateIntraEdgeMove(move, currentSolution);
-        }
-
-        return MoveValidityStatus.INVALID_REMOVE;
-    }
-
-    private void initMoveQueue(Solution currentSolution,
-                                Set<Integer> nonSelectedNodes,
-                                Set<Integer> allNodes){
-        moveQueue.clear();
+    /**
+     * Rebuilds the complete neighborhood cache from scratch. The method is
+     * intentionally expensive and therefore executed only during the initial
+     * setup and at fixed intervals to eliminate drift caused by incremental
+     * updates.
+     *
+     * @param currentSolution solution that serves as reference for delta calculations
+     * @param nonSelectedNodes nodes that are currently outside of the cycle
+     * @param allNodes every node identifier in the instance
+     */
+    private void rebuildNeighborhood(Solution currentSolution,
+                                     Set<Integer> nonSelectedNodes,
+                                     Set<Integer> allNodes) {
+        moveList.clear();
         moveSignatures.clear();
-        skippedMoves.clear();
 
         List<Move> allMoves = getNeighborhood(currentSolution, nonSelectedNodes, allNodes);
         for (Move move : allMoves) {
             DeltaMove deltaMove = Move2DeltaMove(move, currentSolution);
-            if (deltaMove != null) {
+            if (deltaMove != null && deltaMove.getDelta() < 0){
                 String moveSignature = deltaMove.getSignature();
                 if (!moveSignatures.contains(moveSignature)) {
-                    moveQueue.offer(deltaMove);
+                    moveList.add(deltaMove);
                     moveSignatures.add(moveSignature);
                 }
             }
         }
 
+        moveList.sort(Comparator.comparingInt(DeltaMove::getDelta));
     }
 
-    private Set<Integer> getAffectedNodes(DeltaMove move, int[] pathBeforeMove) {
-        Set<Integer> affected = new HashSet<>();
+
+    /**
+     * Validates whether a cached move is still applicable after a number of
+     * incremental updates by inspecting structural invariants such as node
+     * positions, incident edges and membership in the selected set.
+     *
+     * @return status describing whether the move can be applied, skipped,
+     *         needs recalculation or should be dropped entirely
+     */
+    private MoveValidityStatus checkMoveValidity(DeltaMove move, Solution currentSolution, Set<Integer> nonSelectedNodes) {
+        int[] path = currentSolution.getPath();
 
         if (move.getType().equals("Inter")) {
-            // For inter-route moves: the swapped nodes and their neighbors
-            affected.add(move.getStartNodeID());
-            affected.add(move.getEndNodeID());
-            affected.add(move.getEdge1End());  // successor of old node
-            affected.add(move.getEdge2End());  // predecessor of old node
+            int oldNodeID = move.getStartNodeID();
+            int newNodeID = move.getEndNodeID();
+            int pos = move.getPos1();
+
+            // Check if replacement node is still outside
+            if (!nonSelectedNodes.contains(newNodeID)) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+
+            // Check if position still contains the original old node
+            if (pos >= path.length - 1 || path[pos] != oldNodeID) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+
+            // Check predecessor and successor relationships
+            int n = path.length - 1;
+            int currentPred = (pos == 0) ? path[n - 1] : path[pos - 1];
+            int currentSucc = path[(pos + 1) % n];
+
+            if (currentPred != move.getPredecessor() || currentSucc != move.getSuccessor()) {
+                return MoveValidityStatus.RECALCULATE;
+            }
+
+            return MoveValidityStatus.VALID_APPLY;
+        }
+
+        else if (move.getType().equals("Intra") && move.getIntraType().equals("Edge")) {
+            int pos1 = move.getPos1();
+            int pos2 = move.getPos2();
+
+            // Check if positions are valid
+            if (pos1 >= path.length - 1 || pos2 >= path.length - 1) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+
+            // Check if endpoints still contain the same nodes
+            int nodeA = move.getStartNodeID();
+            int nodeB = move.getEndNodeID();
+
+            if (path[pos1] != nodeA && path[pos1] != nodeB) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+            if (path[pos2] != nodeA && path[pos2] != nodeB) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+
+            // Verify the edges still exist
+            Edge oldEdge1 = move.getOldEdge1();
+            Edge oldEdge2 = move.getOldEdge2();
+
+            boolean edge1Exists = solutionEdges.contains(oldEdge1) ||
+                    solutionEdges.contains(oldEdge1.reverse());
+            boolean edge2Exists = solutionEdges.contains(oldEdge2) ||
+                    solutionEdges.contains(oldEdge2.reverse());
+
+            if (!edge1Exists || !edge2Exists) {
+                return MoveValidityStatus.INVALID_REMOVE;
+            }
+
+            // Check if edges are in the same relative direction
+            boolean edge1SameDirection = solutionEdges.contains(oldEdge1);
+            boolean edge2SameDirection = solutionEdges.contains(oldEdge2);
+
+            if (edge1SameDirection == edge2SameDirection) {
+                return MoveValidityStatus.VALID_APPLY;
+            } else {
+                return MoveValidityStatus.VALID_SKIP;
+            }
+        }
+
+        return MoveValidityStatus.INVALID_REMOVE;
+    }
+
+    /**
+     * Computes the set of path indices that are influenced by a given intra
+     * move. The result considers the endpoints, their immediate
+     * neighbors, and every vertex contained inside the reversed segment so that
+     * subsequent delta calculations can focus on the impacted area.
+     *
+     * @param move intra edge move whose footprint should be tracked
+     * @param pathBeforeMove Hamiltonian cycle before applying the move
+     * @return indices inside pathBeforeMove that must be refreshed
+     */
+    private Set<Integer> getAffectedPositionsIntra(DeltaMove move, int[] pathBeforeMove) {
+        Set<Integer> affectedPos = new HashSet<>();
+
+        int pos1 = move.getPos1();
+        int pos2 = move.getPos2();
+        int n = pathBeforeMove.length - 1; // Exclude duplicate end node
+
+        // Add the edge endpoints
+        affectedPos.add(pos1);
+        affectedPos.add(pos2);
+
+        // Add neighbors of endpoints (with wrap-around)
+        affectedPos.add((pos1 - 1 + n) % n);
+        affectedPos.add((pos1 + 1) % n);
+        affectedPos.add((pos2 - 1 + n) % n);
+        affectedPos.add((pos2 + 1) % n);
+
+        // include ALL positions in the reversed segment
+        for (int i = pos1 + 1; i <= pos2; i++) {
+            affectedPos.add(i);
+        }
+
+        return affectedPos;
+    }
+
+    /**
+     * Computes the set of path indices influenced by an inter move .
+     * Only the position itself and its immediate neighbors are affected
+     *
+     * @param move inter move under evaluation
+     * @param pathBeforeMove Hamiltonian cycle before applying the move
+     * @return indices inside pathBeforeMove that must be refreshed
+     */
+    private Set<Integer> getAffectedPositionsInter(DeltaMove move, int[] pathBeforeMove) {
+        Set<Integer> affectedPos = new HashSet<>();
+
+        int pos = move.getPos1();
+        int n = pathBeforeMove.length - 1;
+
+        affectedPos.add(pos);
+        affectedPos.add((pos - 1 + n) % n);
+        affectedPos.add((pos + 1) % n);
+
+        return affectedPos;
+    }
+
+    /**
+     * Converts the affected positions of a move into explicit node identifiers
+     *
+     * @return node identifiers impacted by the move
+     */
+    private Set<Integer> getAffectedNodes(DeltaMove move, int[] pathBeforeMove) {
+        Set<Integer> affected = new HashSet<>();
+        Set<Integer> positions;
+
+        if (move.getType().equals("Inter")) {
+            positions = getAffectedPositionsInter(move, pathBeforeMove);
         } else if (move.getType().equals("Intra") && move.getIntraType().equals("Edge")) {
-            // For edge exchange: only the 4 edge endpoints are affected
-            // Their incident edges changed, so moves involving them need recalculation
-            // Interior nodes of reversed segment don't need move regeneration
-            int edge1Start = move.getEdge1Start();
-            int edge1End = move.getEdge1End();
+            positions = getAffectedPositionsIntra(move, pathBeforeMove);
+        } else {
+            return affected;
+        }
 
-            int pos1 = -1;
-            int pos2 = -1;
-            for (int i = 0; i < pathBeforeMove.length; i++) {
-                if (pathBeforeMove[i] == edge1Start) {
-                    pos1 = i;
-                }
-                if (pathBeforeMove[i] == move.getEdge2Start()) {
-                    pos2 = i;
-                }
+        // Convert positions to node IDs
+        for (int pos : positions) {
+            if (pos < pathBeforeMove.length - 1) {
+                affected.add(pathBeforeMove[pos]);
             }
+        }
 
-            if(pos1>pos2){
-                int temp = pos1;
-                pos1 = pos2;
-                pos2 = temp;
-            }
-
-            for (int i = pos1; i <= pos2; i++) {
-                affected.add(pathBeforeMove[i]);
-            }
-
-
+        if (move.getType().equals("Inter")) {
+            affected.add(move.getEndNodeID());
         }
 
         return affected;
     }
 
+    /**
+     * Regenerates the subset of moves whose evaluation becomes stale after
+     * applying the last improving move.
+     */
     private void generateNewMoves(Solution currentSolution,
                                   Set<Integer> affectedNodes,
                                   Set<Integer> nonSelectedNodes,
-                                  Set<Integer> allNodes){
-        Set<Integer> selectedNodeIDs = new HashSet<>(allNodes);
-        selectedNodeIDs.removeAll(nonSelectedNodes);
+                                  Set<Integer> allNodes,
+                                  boolean isInterMove){
+        Set<Integer> selectedNodeIDs = solutionNodes;
 
         int[] currentPath = currentSolution.getPath();
+        int n = currentPath.length - 1;
 
-        // Generate inter moves involving affected nodes
-        // Only affected nodes need their inter-route moves recalculated
-        for (int affectedNode : affectedNodes) {
-            if (selectedNodeIDs.contains(affectedNode)) {
-                // Generate inter moves: swap this node with outside nodes
+        // For Inter moves: only regenerate inter moves for affected positions
+        // The affected nodes are those whose edges changed (position and neighbors)
+        if (isInterMove) {
+            // Remove only inter moves involving affected nodes
+            moveList.removeIf(m -> {
+                if (m.getType().equals("Inter")) {
+                    if (affectedNodes.contains(m.getStartNodeID())) {
+                        moveSignatures.remove(m.getSignature());
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            // Regenerate inter moves ONLY for affected nodes
+            for (int affectedNode : affectedNodes) {
+                if (!selectedNodeIDs.contains(affectedNode)) continue;
+
+                int pos = nodePositions.get(affectedNode);
+
                 for (int outsideNode : nonSelectedNodes) {
+                    int predPos = (pos - 1 + n) % n;
+                    int succPos = (pos + 1) % n;
+
+                    int predecessorID = currentPath[predPos];
+                    int successorID = currentPath[succPos];
+
+                    Edge oldEdge1 = new Edge(affectedNode, successorID);
+                    Edge oldEdge2 = new Edge(predecessorID, affectedNode);
+
                     int delta = deltaNodeSwap(affectedNode, outsideNode, currentSolution);
-                    Move move = new Move("Inter", "-", affectedNode, outsideNode, delta);
-                    DeltaMove deltaMove = Move2DeltaMove(move, currentSolution);
+
+                    if (delta < 0) {
+                        DeltaMove deltaMove = new DeltaMove(
+                                "Inter",
+                                "-",
+                                affectedNode,
+                                outsideNode,
+                                delta,
+                                oldEdge1,
+                                oldEdge2,
+                                pos,
+                                -1,
+                                predecessorID,
+                            successorID
+                        );
+
+                        String signature = deltaMove.getSignature();
+                        if (!moveSignatures.contains(signature)) {
+                            moveList.add(deltaMove);
+                            moveSignatures.add(signature);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Generate/regenerate Intra edge exchange moves for affected nodes
+        // Remove existing intra moves involving affected nodes
+        moveList.removeIf(m -> {
+            if (m.getType().equals("Intra") && m.getIntraType().equals("Edge")) {
+                if (affectedNodes.contains(m.getStartNodeID()) ||
+                        affectedNodes.contains(m.getEndNodeID())) {
+                    moveSignatures.remove(m.getSignature());
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        // Regenerate intra moves for affected nodes
+        for (int nodeA : affectedNodes) {
+            if (!selectedNodeIDs.contains(nodeA)) continue;
+
+            int posA = nodePositions.get(nodeA);
+
+            // Generate moves with all other selected nodes
+            for (int posB = 0; posB < n; posB++) {
+                int nodeB = currentPath[posB];
+
+                if (nodeA == nodeB) continue;
+                if (!selectedNodeIDs.contains(nodeB)) continue;
+
+                // Ensure edges are not adjacent
+                if (Math.abs(posA - posB) <= 1) continue;
+                if (posA == 0 && posB == n - 1) continue;
+                if (posB == 0 && posA == n - 1) continue;
+
+                int pos1 = Math.min(posA, posB);
+                int pos2 = Math.max(posA, posB);
+
+                int node1 = currentPath[pos1];
+                int node2 = currentPath[pos2];
+
+                Edge oldEdge1 = new Edge(node1, currentPath[(pos1 + 1) % n]);
+                Edge oldEdge2 = new Edge(node2, currentPath[(pos2 + 1) % n]);
+
+                int predPos1 = (pos1 - 1 + n) % n;
+                int succPos2 = (pos2 + 1) % n;
+                int pred1 = currentPath[predPos1];
+                int succ2 = currentPath[succPos2];
+
+                int delta = deltaEdgeExchange(node1, node2, currentSolution);
+
+                if (delta < 0) {
+                    DeltaMove deltaMove = new DeltaMove(
+                            "Intra",
+                            "Edge",
+                            node1,
+                            node2,
+                            delta,
+                            oldEdge1,
+                            oldEdge2,
+                            pos1,
+                            pos2,
+                            pred1,
+                            succ2
+                    );
 
                     String signature = deltaMove.getSignature();
                     if (!moveSignatures.contains(signature)) {
-                        moveQueue.offer(deltaMove);
+                        moveList.add(deltaMove);
                         moveSignatures.add(signature);
                     }
                 }
             }
         }
+    }
 
-        // Generate intra edge exchange moves involving affected nodes
-        // Key optimization: only generate moves between pairs of affected nodes
-        // or between one affected and one non-affected node
-        List<Integer> affectedList = new ArrayList<>(affectedNodes);
-        
-        for (int i = 0; i < affectedList.size(); i++) {
-            int affectedNode = affectedList.get(i);
-            if (!selectedNodeIDs.contains(affectedNode)) continue;
-            
-            int affectedPos = findNodePosition(currentPath, affectedNode);
-            if (affectedPos == -1) continue;
+    /**
+     * Recomputes structures describing the Solution (node positions and edge set) from the
+     * supplied path.
 
-            // Generate moves with all other selected nodes (both affected and non-affected)
-            for (int j = 0; j < currentPath.length - 1; j++) {
-                int otherNode = currentPath[j];
-                if (otherNode == affectedNode) continue;
-                
-                // Skip if edges are adjacent
-                if (Math.abs(affectedPos - j) < 2) continue;
-                if (affectedPos == 0 && j == currentPath.length - 2) continue;
+     */
+    private void rebuildStructures(int[] path) {
+        // Rebuild node positions
+        nodePositions.clear();
+        for (int i = 0; i < path.length - 1; i++) {
+            nodePositions.put(path[i], i);
+        }
 
-                int delta = deltaEdgeExchange(affectedNode, otherNode, currentSolution);
-                Move move = new Move("Intra", "Edge", affectedNode, otherNode, delta);
-                DeltaMove deltaMove = Move2DeltaMove(move, currentSolution);
-
-                String signature = deltaMove.getSignature();
-                if (!moveSignatures.contains(signature)) {
-                    moveQueue.offer(deltaMove);
-                    moveSignatures.add(signature);
-                }
-            }
+        // Rebuild solution edges
+        solutionEdges.clear();
+        for (int i = 0; i < path.length; i++) {
+            int startNodeID = path[i];
+            int endNodeID = path[(i + 1) % path.length];
+            solutionEdges.add(new Edge(startNodeID, endNodeID));
         }
     }
 
+    /**
+     * Repeatedly picks the best improving move,
+     * applies it, and regenerates only the affected parts of the neighborhood
+     * until no improvements remain.
+     */
     @Override
     public Solution steepestLocalSearch(Solution currentSolution, Set<Integer> allNodeIDs) {
-        Set<Integer> selectedNodeIDs = Arrays.stream(currentSolution.getPath())
+        solutionNodes = Arrays.stream(currentSolution.getPath())
                 .boxed().collect(Collectors.toSet());
         Set<Integer> nonSelectedNodeIDs = new HashSet<>(allNodeIDs);
-        nonSelectedNodeIDs.removeAll(selectedNodeIDs);
+        nonSelectedNodeIDs.removeAll(solutionNodes);
 
-        initMoveQueue(currentSolution, nonSelectedNodeIDs, allNodeIDs);
+        int[] path = currentSolution.getPath();
+
+        // Initialize structures
+        rebuildStructures(path);
+
+        rebuildNeighborhood(currentSolution, nonSelectedNodeIDs, allNodeIDs);
 
         currentIteration = 0;
 
-        while (!moveQueue.isEmpty()) {
-//            DeltaMove peekMove = moveQueue.peek();
-//            System.out.println("Iteration: " + currentIteration +
-//                    ", Current Score: " + currentSolution.getScore() +
-//                    ", Moves in Queue: " + moveQueue.size() +
-//                    ", Best move delta: " + peekMove.getDelta() +
-//                    ", Validity Check: " + checkMoveValidity(peekMove, currentSolution, nonSelectedNodeIDs));
-            DeltaMove bestMove = moveQueue.poll();
-            String signature = bestMove.getSignature();
-            moveSignatures.remove(signature);
-
-
-            MoveValidityStatus status = checkMoveValidity(bestMove, currentSolution,
-                    nonSelectedNodeIDs);
-
-            if (status == MoveValidityStatus.INVALID_REMOVE) {
-                // Move is invalid, discard and continue
-                continue;
+        while (!moveList.isEmpty()) {
+            // Periodic full rebuild
+            if (currentIteration > 0 && currentIteration % REBUILD_INTERVAL == 0) {
+                rebuildNeighborhood(currentSolution, nonSelectedNodeIDs, allNodeIDs);
             }
 
-            if (status == MoveValidityStatus.VALID_SKIP) {
-                skippedMoves.add(bestMove);
-                continue;
-            }
+            boolean moveApplied = false;
 
-            if (status == MoveValidityStatus.RECALCULATE) {
-                int newDelta;
-                if (bestMove.getType().equals("Inter")) {
-                    newDelta = deltaNodeSwap(bestMove.getStartNodeID(),
-                            bestMove.getEndNodeID(),
-                            currentSolution);
-                } else if (bestMove.getType().equals("Intra") &&
-                        bestMove.getIntraType().equals("Edge")) {
-                    newDelta = deltaEdgeExchange(bestMove.getStartNodeID(),
-                            bestMove.getEndNodeID(),
-                            currentSolution);
-                } else {
+            // Iterate through list from best to worst
+            for (int i = 0; i < moveList.size(); i++) {
+                DeltaMove move = moveList.get(i);
+
+                MoveValidityStatus status = checkMoveValidity(move, currentSolution, nonSelectedNodeIDs);
+
+                if (status == MoveValidityStatus.INVALID_REMOVE) {
+                    moveList.remove(i);
+                    moveSignatures.remove(move.getSignature());
+                    i--; // Adjust index after removal
                     continue;
                 }
 
-                // Recreate move with current solution state to update edge info
-                Move tempMove = new Move(
-                        bestMove.getType(),
-                        bestMove.getIntraType(),
-                        bestMove.getStartNodeID(),
-                        bestMove.getEndNodeID(),
-                        newDelta
-                );
-                DeltaMove updatedMove = Move2DeltaMove(tempMove, currentSolution);
-                
-                if (updatedMove != null) {
-                    String sig = updatedMove.getSignature();
-                    if (!moveSignatures.contains(sig)) {
-                        moveQueue.offer(updatedMove);
-                        moveSignatures.add(sig);
-                    }
+                if (status == MoveValidityStatus.VALID_SKIP) {
+                    continue;
                 }
-                continue;
+
+                if (status == MoveValidityStatus.RECALCULATE) {
+                    int newDelta;
+                    if (move.getType().equals("Inter")) {
+                        newDelta = deltaNodeSwap(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
+                    } else {
+                        newDelta = deltaEdgeExchange(move.getStartNodeID(), move.getEndNodeID(), currentSolution);
+                    }
+
+                    // Create updated move with current solution state
+                    Move tempMove = new Move(
+                            move.getType(),
+                            move.getIntraType(),
+                            move.getStartNodeID(),
+                            move.getEndNodeID(),
+                            newDelta
+                    );
+                    DeltaMove updatedMove = Move2DeltaMove(tempMove, currentSolution);
+
+                    // Replace old move with updated one
+                    moveList.remove(i);
+                    moveSignatures.remove(move.getSignature());
+
+                    if (updatedMove != null && updatedMove.getDelta() < 0) {
+                        String sig = updatedMove.getSignature();
+                        if (!moveSignatures.contains(sig)) {
+                            moveList.add(updatedMove);
+                            moveSignatures.add(sig);
+                        }
+                    }
+                    i--;
+                    continue;
+                }
+
+                // status == VALID_APPLY
+                if (move.getDelta() < 0) {
+                    Set<Integer> affectedNodes = getAffectedNodes(move, currentSolution.getPath());
+                    boolean isInterMove = move.getType().equals("Inter");
+
+                    currentSolution = applyMove(currentSolution, move);
+
+                    // Update selected/non-selected sets for inter moves
+                    if (isInterMove) {
+                        nonSelectedNodeIDs.add(move.getStartNodeID());
+                        nonSelectedNodeIDs.remove(move.getEndNodeID());
+                        solutionNodes.remove(move.getStartNodeID());
+                        solutionNodes.add(move.getEndNodeID());
+                    }
+                    rebuildStructures(currentSolution.getPath());
+
+                    currentIteration++;
+                    currentSolution.setIterationCount(currentIteration);
+
+                    // Remove the applied move
+                    moveList.remove(i);
+                    moveSignatures.remove(move.getSignature());
+
+                    // Generate new moves - pass isInterMove flag
+                    generateNewMoves(currentSolution, affectedNodes, nonSelectedNodeIDs, allNodeIDs, isInterMove);
+
+                    // Re-sort the list to maintain best-first order
+                    moveList.sort(Comparator.comparingInt(DeltaMove::getDelta));
+
+                    moveApplied = true;
+                    break; // Start from beginning of list again
+                } else {
+                    // Move delta is no longer improving, remove it
+                    moveList.remove(i);
+                    moveSignatures.remove(move.getSignature());
+                    i--;
+                }
             }
 
-            // status == VALID_APPLY
-            if (bestMove.getDelta() < 0) {
-                Set<Integer> affectedNodes = getAffectedNodes(bestMove, currentSolution.getPath());
-
-                currentSolution = applyMove(currentSolution, bestMove);
-
-                // Update selected/non-selected sets for inter moves
-                if (bestMove.getType().equals("Inter")) {
-                    selectedNodeIDs.remove(bestMove.getStartNodeID());
-                    selectedNodeIDs.add(bestMove.getEndNodeID());
-                    nonSelectedNodeIDs.add(bestMove.getStartNodeID());
-                    nonSelectedNodeIDs.remove(bestMove.getEndNodeID());
-                }
-
-                currentIteration++;
-                currentSolution.setIterationCount(currentIteration);
-
-                // Generate new moves for affected nodes only
-                generateNewMoves(currentSolution, affectedNodes,
-                        nonSelectedNodeIDs, allNodeIDs);
-
-                // Reprocess skipped moves after solution update
-                Set<DeltaMove> toReprocess = new HashSet<>(skippedMoves);
-                skippedMoves.clear();
-                for (DeltaMove skipped : toReprocess) {
-                    MoveValidityStatus skippedStatus = checkMoveValidity(skipped, currentSolution, nonSelectedNodeIDs);
-                    
-                    if (skippedStatus == MoveValidityStatus.VALID_APPLY) {
-                        String sig = skipped.getSignature();
-                        if (!moveSignatures.contains(sig)) {
-                            moveQueue.offer(skipped);
-                            moveSignatures.add(sig);
-                        }
-                    } else if (skippedStatus == MoveValidityStatus.VALID_SKIP) {
-                        skippedMoves.add(skipped);
-                    } else if (skippedStatus == MoveValidityStatus.RECALCULATE) {
-                        int newDelta;
-                        if (skipped.getType().equals("Inter")) {
-                            newDelta = deltaNodeSwap(skipped.getStartNodeID(), skipped.getEndNodeID(), currentSolution);
-                        } else {
-                            newDelta = deltaEdgeExchange(skipped.getStartNodeID(), skipped.getEndNodeID(), currentSolution);
-                        }
-                        DeltaMove updated = new DeltaMove(
-                                skipped.getType(), skipped.getIntraType(),
-                                skipped.getStartNodeID(), skipped.getEndNodeID(),
-                                newDelta, skipped.getEdge1End(), skipped.getEdge2End(),
-                                skipped.isEdge1Direction(), skipped.isEdge2Direction()
-                        );
-                        String sig = updated.getSignature();
-                        if (!moveSignatures.contains(sig)) {
-                            moveQueue.offer(updated);
-                            moveSignatures.add(sig);
-                        }
-                    }
-                    // INVALID_REMOVE: just don't add back
-                }
-            } else {
-                // No improving move found (best delta >= 0)
+            if (!moveApplied) {
+                // No improving move found after checking entire list
                 break;
             }
         }
 
         return currentSolution;
     }
+
 
     @Override
     public Solution getSolution(int startNodeID) {
@@ -461,10 +616,8 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
         Solution currentSolution = getStartSolution(startNodeID);
         currentSolution.setIterationCount(0);
 
+
         return steepestLocalSearch(currentSolution, allNodeIDs);
     }
-
-
-
 
 }

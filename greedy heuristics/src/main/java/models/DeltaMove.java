@@ -1,13 +1,15 @@
 package main.java.models;
 
 public class DeltaMove extends Move{
-    private int edge1Start;
-    private int edge1End;
-    private int edge2Start;
-    private int edge2End;
 
-    private boolean edge1Direction;
-    private boolean edge2Direction;
+    private Edge old_edge1;
+    private Edge old_edge2;
+    
+    // Structural metadata for validation
+    private int pos1;          // Position in path for intra moves, or node position for inter moves
+    private int pos2;          // Second position for intra moves
+    private int predecessor;   // Predecessor node ID
+    private int successor;     // Successor node ID
 
 
     // Constructor
@@ -16,44 +18,58 @@ public class DeltaMove extends Move{
                      int startNodeID,
                      int endNodeID,
                      int delta,
-                     int edge1End,
-                     int edge2End,
-                     boolean edge1Dir,
-                     boolean edge2Dir) {
+                     Edge old_edge1,
+                     Edge old_edge2,
+                     int pos1,
+                     int pos2,
+                     int predecessor,
+                     int successor
+    ) {
         super(type, intraType, startNodeID, endNodeID, delta);
-        this.edge1Start = startNodeID;
-        this.edge1End = edge1End;
-        this.edge2Start = endNodeID;
-        this.edge2End = edge2End;
-        this.edge1Direction = edge1Dir;
-        this.edge2Direction = edge2Dir;
+        this.old_edge1 = old_edge1;
+        this.old_edge2 = old_edge2;
+        this.pos1 = pos1;
+        this.pos2 = pos2;
+        this.predecessor = predecessor;
+        this.successor = successor;
     }
 
-    public int getEdge1Start() {
-        return edge1Start;
+    public Edge getOldEdge1() {
+        return old_edge1;
     }
-    public int getEdge1End() {
-        return edge1End;
+    public Edge getOldEdge2() {
+        return old_edge2;
     }
-    public int getEdge2Start() {
-        return edge2Start;
+    
+    public int getPos1() {
+        return pos1;
     }
-    public int getEdge2End() {
-        return edge2End;
+    
+    public int getPos2() {
+        return pos2;
     }
-    public boolean isEdge1Direction() {
-        return edge1Direction;
+    
+    public int getPredecessor() {
+        return predecessor;
     }
-    public boolean isEdge2Direction() {
-        return edge2Direction;
+    
+    public int getSuccessor() {
+        return successor;
     }
 
     public String getSignature() {
-        if (type.equals("Inter")) {
-            return type + "-" + edge1Start + "-" + edge1End + "-" +
-                    edge2Start + "-" + edge2End;
+        // Enhanced signature with structural information
+        if (this.getType().equals("Intra") && this.getIntraType().equals("Edge")) {
+            return "2opt|" + pos1 + "|" + pos2 + "|" +
+                   old_edge1.getStartNodeID() + "|" + old_edge1.getEndNodeID() + "|" +
+                   old_edge2.getStartNodeID() + "|" + old_edge2.getEndNodeID() + "|" +
+                   predecessor + "|" + successor;
+        } else if (this.getType().equals("Inter")) {
+            return "Inter|" + pos1 + "|" + startNodeID + "|" + endNodeID + "|" +
+                   predecessor + "|" + successor;
         }
-        return type + "-" + intraType + "-" + Math.min(edge1Start, edge2Start) + "-" +
-                Math.max(edge1Start, edge2Start);
+        return this.getType() + "-" +
+                this.old_edge1.getEdgeTxt() + "-" + this.old_edge2.getEdgeTxt();
     }
+
 }
