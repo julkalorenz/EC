@@ -18,6 +18,9 @@ public class SolutionDrawer extends JPanel {
     private int minX, maxX, minY, maxY;
     private int minCost, maxCost;
 
+    private static final int MIN_RADIUS = 4;
+    private static final int MAX_RADIUS = 14;
+
     public SolutionDrawer(List<Node> nodesList, int[] cycleNodes) {
         this.nodesList = nodesList;
         this.cycleNodes = cycleNodes;
@@ -60,18 +63,32 @@ public class SolutionDrawer extends JPanel {
         return panelHeight - (int) ((y - minY) * scale + margin); // Inverted Y
     }
 
+    private int radiusForCost(int cost) {
+        if (maxCost <= minCost) {
+            return (MIN_RADIUS + MAX_RADIUS) / 2;
+        }
+        double t = (double) (cost - minCost) / (double) (maxCost - minCost);
+        int r = (int) Math.round(MIN_RADIUS + t * (MAX_RADIUS - MIN_RADIUS));
+        if (r < MIN_RADIUS) r = MIN_RADIUS;
+        if (r > MAX_RADIUS) r = MAX_RADIUS;
+        return r;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         Graphics2D g2d = (Graphics2D) g;
-        int radius = 6;
+
+        // Improve visual quality
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         g2d.setColor(Color.GRAY);
         for (Node node : nodesList) {
             int x = scaleX(node.getX());
             int y = scaleY(node.getY());
-            g2d.fillOval(x - radius, y - radius, 2 * radius, 2 * radius);
+            int r = radiusForCost(node.getCost());
+            g2d.fillOval(x - r, y - r, 2 * r, 2 * r);
         }
 
         g2d.setColor(Color.RED);
@@ -84,23 +101,10 @@ public class SolutionDrawer extends JPanel {
             int x2 = scaleX(to.getX());
             int y2 = scaleY(to.getY());
 
-            g2d.fillOval(x1 - radius, y1 - radius, 2 * radius, 2 * radius);
+            int rFrom = radiusForCost(from.getCost());
+            g2d.fillOval(x1 - rFrom, y1 - rFrom, 2 * rFrom, 2 * rFrom);
             g2d.drawLine(x1, y1, x2, y2);
         }
     }
 
-//    public static void main(String[] args) {
-//        CSVParser parser = new CSVParser("src/main/data/TSPA.csv", ";");
-//        List<Node> nodeList = parser.getNodes();
-//        RandomSolver randomSolver = new RandomSolver();
-//        int[] cycle = randomSolver.generateRandomSolution(nodeList);
-//
-//        JFrame frame = new JFrame("Solution");
-//        SolutionDrawer drawer = new SolutionDrawer(nodeList, cycle);
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.add(drawer);
-//        frame.pack();
-//        frame.setLocationRelativeTo(null);
-//        frame.setVisible(true);
-//    }
 }
