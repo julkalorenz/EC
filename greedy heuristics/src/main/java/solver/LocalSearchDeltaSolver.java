@@ -332,16 +332,6 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
         // For Inter moves: only regenerate inter moves for affected positions
         // The affected nodes are those whose edges changed (position and neighbors)
         if (isInterMove) {
-            // Remove only inter moves involving affected nodes
-            moveList.removeIf(m -> {
-                if (m.getType().equals("Inter")) {
-                    if (affectedNodes.contains(m.getStartNodeID())) {
-                        moveSignatures.remove(m.getSignature());
-                        return true;
-                    }
-                }
-                return false;
-            });
 
             // Regenerate inter moves ONLY for affected nodes
             for (int affectedNode : affectedNodes) {
@@ -385,20 +375,6 @@ public class LocalSearchDeltaSolver extends LocalSearchSolver{
                 }
             }
         }
-
-        // Generate/regenerate Intra edge exchange moves for affected nodes
-        // Remove existing intra moves involving affected nodes
-        moveList.removeIf(m -> {
-            if (m.getType().equals("Intra") && m.getIntraType().equals("Edge")) {
-                if (affectedNodes.contains(m.getStartNodeID()) ||
-                        affectedNodes.contains(m.getEndNodeID())) {
-                    moveSignatures.remove(m.getSignature());
-                    return true;
-                }
-            }
-            return false;
-        });
-
         // Regenerate intra moves for affected nodes
         for (int nodeA : affectedNodes) {
             if (!selectedNodeIDs.contains(nodeA)) continue;
