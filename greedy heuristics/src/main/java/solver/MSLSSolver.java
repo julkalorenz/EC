@@ -17,13 +17,20 @@ public class MSLSSolver extends GenericSolver{
         for (int i = 0; i < 200; i++) {
 
             // Consider switching to delta solver if fixed
-            GenericSolver LSSolver = new LocalSearchSolver(getDistanceMatrix(),
+            GenericSolver LSSolver = new LocalSearchDeltaSolver(getDistanceMatrix(),
                     getObjectiveMatrix(),
                     getCosts(),
-                    getNodes(),
-                    "Steepest",
-                    "Edge",
-                    "Random");
+                    getNodes());
+
+//            GenericSolver LSSolver = new LocalSearchSolver(getDistanceMatrix(),
+//                    getObjectiveMatrix(),
+//                    getCosts(),
+//                    getNodes(),
+//                    "Steepest",
+//                    "Edge",
+//                    "Random");
+
+
             Solution currentSolution = LSSolver.getSolution(startNodeID);
 
             // Evaluate the improved solution
