@@ -25,13 +25,13 @@ public class Main{
             int[][] objectiveMatrix = parser.getObjectiveMatrix();
             List<Node> nodes = parser.getNodes();
             int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-            GenericSolver solver = new LocalSearchDeltaSolver(
+            GenericSolver solver = new MSLSSolver(
                     distanceMatrix,
                     objectiveMatrix,
                     costs,
                     nodes
             );
-            Experiment experiment = new Experiment(solver, data);
+            Experiment experiment = new Experiment(solver, data, 20);
             experiment.runExperiment();
             experiment.printStats();
         }
