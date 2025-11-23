@@ -1,6 +1,7 @@
 package main.java.models;
 
 import main.java.solver.GenericSolver;
+import main.java.solver.IteratedLocalSearchSolver;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -17,8 +18,12 @@ public class Experiment {
     private int[] solutionScores;
     private String datasetName;
     private int[] solutionIters;
-
     private int maxIterations;
+    // only of ILS solver
+    private int minLSRuns = Integer.MAX_VALUE;
+    private int maxLSRuns = Integer.MIN_VALUE;
+    private int totalLSRuns = 0; // for computing average
+
 
     public Experiment(GenericSolver solver, String datasetName) {
         this(solver, datasetName, 200);
@@ -68,6 +73,14 @@ public class Experiment {
             if (bestSolution == null || score < bestSolution.getScore()) {
                 bestSolution = solution;
             }
+            if (solver.getMethodName().equals("Iterated Local Search") && solver instanceof IteratedLocalSearchSolver) {
+                IteratedLocalSearchSolver ilsSolver = (IteratedLocalSearchSolver) solver;
+                int lsRuns = ilsSolver.getTotalLSRuns();
+                totalLSRuns += lsRuns;
+                if (lsRuns < minLSRuns) minLSRuns = lsRuns;
+                if (lsRuns > maxLSRuns) maxLSRuns = lsRuns;
+                ilsSolver.setTotalLSRuns(0); // reset for next iteration
+            }
 
             // --- Progress bar update ---
             double progress = (startNodeID + 1) / (double) maxIterations;
@@ -102,6 +115,7 @@ public class Experiment {
         int maxIters = Integer.MIN_VALUE;
         int totalIters = 0;
 
+
         for (float time : solutionTimes) {
             if (time < minTime) minTime = time;
             if (time > maxTime) maxTime = time;
@@ -120,9 +134,6 @@ public class Experiment {
             totalIters += iters;
         }
 
-
-
-
         float avgTime = totalTime / solutionTimes.length;
         float avgScore = (float) totalScore / solutionScores.length;
         float avgIters = (float) totalIters / solutionIters.length;
@@ -131,6 +142,11 @@ public class Experiment {
         System.out.println("Time (seconds): Min = " + minTime + ", Max = " + maxTime + ", Avg = " + avgTime);
         System.out.println("Score: Min = " + minScore + ", Max = " + maxScore + ", Avg = " + avgScore);
         System.out.println("Iterations: Min = " + minIters + ", Max = " + maxIters + ", Avg = " + (totalIters / solutionIters.length));
+        if (solver.getMethodName().equals("Iterated Local Search")) {
+            float avgLSRuns = totalLSRuns / (float) maxIterations;
+            System.out.println("Local Search runs: Min = " + minLSRuns + ", Max = " + maxLSRuns + ", Avg = " + avgLSRuns);
+        }
+
 
         writeResultsToFile(baseFolder, minTime, maxTime, avgTime, minScore, maxScore, avgScore, minIters, maxIters, avgIters);
     }
@@ -156,6 +172,12 @@ public class Experiment {
             writer.write(String.format(Locale.US,
                     "Iterations: %.2f (%d, %d)%n",
                     avgIters, minIters, maxIters));
+            if (solver.getMethodName().equals("Iterated Local Search")) {
+                float avgLSRuns = (float) totalLSRuns / maxIterations;
+                writer.write(String.format(Locale.US,
+                        "LS Runs: %.2f (%d, %d)%n",
+                        avgLSRuns, minLSRuns, maxLSRuns));
+            }
             writer.write("\n");
         } catch (IOException e) {
             e.printStackTrace();

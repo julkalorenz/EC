@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 public class IteratedLocalSearchSolver extends GenericSolver {
 
     private float stoppingTimeSeconds;
+    private int totalLSRuns = 0;
+
 
     public IteratedLocalSearchSolver(
             int[][] distanceMatrix,
@@ -22,6 +24,13 @@ public class IteratedLocalSearchSolver extends GenericSolver {
     ) {
         super(distanceMatrix, objectiveMatrix, costs, nodes, "Iterated Local Search");
         this.stoppingTimeSeconds = stoppingTimeSeconds;
+    }
+
+    public int getTotalLSRuns() {
+        return totalLSRuns;
+    }
+    public void setTotalLSRuns(int totalLSRuns) {
+        this.totalLSRuns = totalLSRuns;
     }
 
     public Solution perturbSolution(Solution solution, Set<Integer> nodeIDsInSolution, Set<Integer> allNodeIDs) {
@@ -110,7 +119,6 @@ public class IteratedLocalSearchSolver extends GenericSolver {
         bestScore = currentSolution.getScore();
 
         long startTime = System.nanoTime();
-        int lsIterations = 0;
         while (true) {
             long currentTime = System.nanoTime();
             float elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0f;
@@ -127,9 +135,8 @@ public class IteratedLocalSearchSolver extends GenericSolver {
                 bestSolution = currentSolution;
                 bestScore = currentScore;
             }
-            lsIterations++;
+            totalLSRuns++;
         }
-        System.out.println("Total LS iterations: " + lsIterations);
         return bestSolution;
     }
 
