@@ -18,9 +18,17 @@ public class Experiment {
     private String datasetName;
     private int[] solutionIters;
 
+    private int maxIterations;
+
     public Experiment(GenericSolver solver, String datasetName) {
+        this(solver, datasetName, 200);
+
+    }
+
+    public Experiment(GenericSolver solver, String datasetName, int maxIterations) {
         this.solver = solver;
         this.datasetName = datasetName;
+        this.maxIterations = maxIterations;
     }
 
     public Solution getBestSolution() {
@@ -39,14 +47,14 @@ public class Experiment {
      */
     public void runExperiment() {
         int nodesCount = solver.getObjectiveMatrix().length;
-        solutionTimes = new float[nodesCount];
-        solutionScores = new int[nodesCount];
-        solutionIters = new int[nodesCount];
+        solutionTimes = new float[maxIterations];
+        solutionScores = new int[maxIterations];
+        solutionIters = new int[maxIterations];
         bestSolution = null;
 
         int barWidth = 40;
 
-        for (int startNodeID = 0; startNodeID < nodesCount; startNodeID++) {
+        for (int startNodeID = 0; startNodeID < maxIterations; startNodeID++) {
             long startTime = System.nanoTime();
             Solution solution = solver.getSolution(startNodeID);
             long endTime = System.nanoTime();
@@ -62,7 +70,7 @@ public class Experiment {
             }
 
             // --- Progress bar update ---
-            double progress = (startNodeID + 1) / (double) nodesCount;
+            double progress = (startNodeID + 1) / (double) maxIterations;
             int filled = (int) (barWidth * progress);
             int percent = (int) (progress * 100);
 
