@@ -3,6 +3,7 @@ package main.java.solver;
 import main.java.models.Node;
 import main.java.models.Solution;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,22 +38,106 @@ public class LargeNeighborhoodSearchSolver extends GenericSolver {
         this.REMOVE_FRACTION = removeFraction;
         this.USE_LOCAL_SEARCH_AFTER_REPAIR = useLocalSearchAfterRepair;
     }
+    private class Segment {
+        int startIndex;
+        int cost;
+
+        public Segment(int startIndex, int cost) {
+            this.startIndex = startIndex;
+            this.cost = cost;
+        }
+    }
 
     public int[] destroy(Solution solution) {
-        // remove 20-40% of the nodes from the solution (default 30%)
-        // select a few subpaths, select randomly, but heuristically remove bad edges, but not fully deterministic (long edges or costly nodes)
-        // and remove them from the solution,
-        // return a new smaller cycle
+
+        // In a nutshell: we will remove segments of 5 nodes from the solution path
+        // The segments will be selected using a roulette wheel selection method
+        // based on the cost of the segments (higher cost = higher chance of being selected)
 
         int[] fullPath = solution.getPath();
-        int nodesToRemove = (int) (REMOVE_FRACTION * (fullPath.length - 1));
+        int pathLength = fullPath.length - 1;
+        int nodesToRemoveCount = (int) (REMOVE_FRACTION * pathLength);
+        int segmentLength = 5;
+        int segmentsNeeded = nodesToRemoveCount / segmentLength;
 
-        // split path into 5-node segments
-        // evaluate edges in each segment, and node costs
-        // remove nodesToRemove/5 segments with probability based on worst score
-        // connect rest of the segments
+        List<Segment> availableSegments = new ArrayList<>();
 
-        return new int[0];
+        for (int i = 0; i < pathLength; i++) {
+            int cost = 0;
+            for (int k = 0; k < segmentLength; k++) {
+                int idx = (i + k) % pathLength;
+                int nextIdx = (i + k + 1) % pathLength;
+                cost += getCosts()[fullPath[idx]] + getDistanceMatrix()[fullPath[idx]][fullPath[nextIdx]];
+            }
+            availableSegments.add(new Segment(i, cost));
+        }
+
+        // Prepare to track removed nodes to avoid overlaps
+        boolean[] removedNodes = new boolean[pathLength];
+        int segmentsRemoved = 0;
+
+        // Roulette Wheel Selection Loop
+        while (segmentsRemoved < segmentsNeeded && !availableSegments.isEmpty()) {
+
+            // Calculate Total Cost of currently VALID segments
+            int totalCost = 0;
+            List<Segment> validSegments = new ArrayList<>();
+
+            for (Segment seg : availableSegments) {
+                // Check if this segment overlaps with already removed nodes
+                boolean overlaps = false;
+                for (int k = 0; k < segmentLength; k++) {
+                    int idx = (seg.startIndex + k) % pathLength;
+                    if (removedNodes[idx]) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+
+                if (!overlaps) {
+                    validSegments.add(seg);
+                    totalCost += seg.cost;
+                }
+            }
+
+            if (validSegments.isEmpty()) break; // No more space to remove segments
+
+            // Spin the Wheel
+            int spin = (int) (Math.random() * totalCost);
+            int currentSum = 0;
+            Segment selectedSegment = null;
+
+            for (Segment seg : validSegments) {
+                currentSum += seg.cost;
+                if (currentSum >= spin) {
+                    selectedSegment = seg;
+                    break;
+                }
+            }
+
+            // Fallback
+            if (selectedSegment == null) selectedSegment = validSegments.getLast();
+
+            // Remove the selected segment
+            for (int k = 0; k < segmentLength; k++) {
+                int idx = (selectedSegment.startIndex + k) % pathLength;
+                removedNodes[idx] = true;
+            }
+            segmentsRemoved++;
+
+            availableSegments.remove(selectedSegment);
+        }
+
+        // Reconstruct Path
+        int[] partialPath = new int[pathLength - (segmentsRemoved * segmentLength)];
+        int currentIdx = 0;
+        for (int i = 0; i < pathLength; i++) {
+            if (!removedNodes[i]) {
+                partialPath[currentIdx++] = fullPath[i];
+            }
+        }
+
+        return partialPath;
     }
 
     public Solution repair(int[] partialPath) {
