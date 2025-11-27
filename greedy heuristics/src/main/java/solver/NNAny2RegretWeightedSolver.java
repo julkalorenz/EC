@@ -2,6 +2,7 @@ package main.java.solver;
 
 import main.java.models.InsertionInfo;
 import main.java.models.Node;
+import main.java.models.Solution;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -98,5 +99,40 @@ public class NNAny2RegretWeightedSolver extends NN2Solver{
 
         }
         return new InsertionInfo(bestPosition, bestNode);
+    }
+
+    public Solution completeSolution(int[] incompletePath) {
+        int targetNodesCount = (int) Math.ceil((getDistanceMatrix().length - 1) / 2.0);
+
+        // remove the last node
+        ArrayList<Integer> path = new ArrayList<>();
+        for (int i = 0; i < incompletePath.length; i++) {
+            if (i == incompletePath.length - 1 && incompletePath[0] == incompletePath[i]) {
+                // Last node is same as starting node → skip it
+                break;
+            }
+            path.add(incompletePath[i]);
+        }
+
+        boolean[] visited = new boolean[getDistanceMatrix().length];
+        for (int nodeId : path) {
+            visited[nodeId] = true;
+        }
+
+        int nodeCount = path.size();
+
+        while (nodeCount < targetNodesCount) {
+            InsertionInfo insertion = findNeighborAndPosition(path, visited);
+            int nextNode = insertion.nodeId;
+            int position = insertion.index;
+
+            path.add(position, nextNode);
+            visited[nextNode] = true;
+            nodeCount++;
+        }
+        path.add(path.getFirst()); // End node is the start node
+
+        int[] finalPath = path.stream().mapToInt(i -> i).toArray();
+        return new Solution(getNodes(), getObjectiveMatrix(), getDistanceMatrix(), getCosts(), finalPath, getMethodName());
     }
 }
