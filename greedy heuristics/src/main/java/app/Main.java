@@ -20,28 +20,37 @@ public class Main{
 
         String[] datasets = {"TSPA", "TSPB"};
         float[] stoppingTimes = {15.9396f, 16.1847f};
+        boolean[] useLSAfterPerturb = {true, false};
         for (String data: datasets) {
-            float stoppingTime;
-            if (data.equals("TSPA")) {
-                stoppingTime = stoppingTimes[0];
-            } else {
-                stoppingTime = stoppingTimes[1];
+            for (boolean useLS: useLSAfterPerturb){
+                float stoppingTime;
+                if (data.equals("TSPA")) {
+                    stoppingTime = stoppingTimes[0];
+                } else {
+                    stoppingTime = stoppingTimes[1];
+                }
+                System.out.println("Running Large Neighborhood Search on Dataset: " + data +
+                        " with stopping time: " + stoppingTime +
+                        " and useLSAfterPerturb: " + useLS);
+                CSVParser parser = new CSVParser("src/main/data/" + data + ".csv", ";");
+                int[][] distanceMatrix = parser.getDistanceMatrix();
+                int[][] objectiveMatrix = parser.getObjectiveMatrix();
+                List<Node> nodes = parser.getNodes();
+                int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
+                GenericSolver solver = new LargeNeighborhoodSearchSolver(
+                        distanceMatrix,
+                        objectiveMatrix,
+                        costs,
+                        nodes,
+                        stoppingTime,
+                        0.3,
+                        useLS
+                );
+                solver.setMethodName("LNS_" + (useLS ? "WithLS" : "NoLS"));
+                Experiment experiment = new Experiment(solver, data, 20);
+                experiment.runExperiment();
+                experiment.printStats();
             }
-            CSVParser parser = new CSVParser("src/main/data/" + data + ".csv", ";");
-            int[][] distanceMatrix = parser.getDistanceMatrix();
-            int[][] objectiveMatrix = parser.getObjectiveMatrix();
-            List<Node> nodes = parser.getNodes();
-            int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
-            GenericSolver solver = new IteratedLocalSearchSolver(
-                    distanceMatrix,
-                    objectiveMatrix,
-                    costs,
-                    nodes,
-                    stoppingTime
-            );
-            Experiment experiment = new Experiment(solver, data, 20);
-            experiment.runExperiment();
-            experiment.printStats();
         }
 
 

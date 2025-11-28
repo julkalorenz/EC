@@ -2,6 +2,7 @@ package main.java.solver;
 
 import main.java.models.Node;
 import main.java.models.Solution;
+import main.java.utils.CSVParser;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -197,6 +198,7 @@ public class LargeNeighborhoodSearchSolver extends GenericSolver {
         float bestScore = bestSolution.getScore();
 
         long startTime = System.nanoTime();
+        int iters = 0;
         while (true) {
             long currentTime = System.nanoTime();
             float elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0f;
@@ -217,8 +219,34 @@ public class LargeNeighborhoodSearchSolver extends GenericSolver {
                 bestScore = bestSolution.getScore();
                 currentSolution = repairedSolution;
             }
+            iters++;
+            bestSolution.setIterationCount(iters);
         }
+        bestSolution.setMethodName(this.getMethodName());
+        return bestSolution;
+    }
 
-        return null;
+    public static void main(String[] args) {
+        String dataset = "TSPA";
+        float stoppingA = 15.9396f;
+        float stoppingB = 16.1847f;
+        CSVParser parser = new CSVParser("src/main/data/" + dataset + ".csv", ";");
+        int[][] distanceMatrix = parser.getDistanceMatrix();
+        int[][] objectiveMatrix = parser.getObjectiveMatrix();
+        List<Node> nodes = parser.getNodes();
+        int[] costs = nodes.stream().mapToInt(Node::getCost).toArray();
+        GenericSolver lnsSolver = new LargeNeighborhoodSearchSolver(
+                distanceMatrix,
+                objectiveMatrix,
+                costs,
+                nodes,
+                stoppingA,
+                0.3,
+                true
+        );
+        Solution solution = lnsSolver.getSolution(0);
+        System.out.println("Large Neighborhood Search solution score: " + solution.getScore());
+        System.out.println("Large Neighborhood Search solution iters: " + solution.getIterationCount());
+
     }
 }

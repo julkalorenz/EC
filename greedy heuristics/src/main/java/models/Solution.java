@@ -32,6 +32,7 @@ public class Solution {
         this.costs = costs;
         this.path = path;
         this.methodName = methodName;
+        this.iterationCount = 0;
     }
 
     public Solution(List<Node> nodes, int[][] objectiveMatrix, int[][] distanceMatrix,
@@ -83,6 +84,14 @@ public class Solution {
 
     public void setIterationCount(int iterationCount) {
         this.iterationCount = iterationCount;
+    }
+
+    public void increaseIterationCount() {
+        this.iterationCount++;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
     }
 
     public void displaySolution() {
